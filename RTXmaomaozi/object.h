@@ -32,7 +32,8 @@ class Object
 
 public:
 
-	Object(float reflectionFactor, float refractionFactor, float refractionEta) :
+	Object(Color color, float reflectionFactor, float refractionFactor, float refractionEta) :
+		color(color),
 		reflectionFactor(reflectionFactor), 
 		refractionFactor(refractionFactor),
 		refractionEta(refractionEta)
@@ -46,22 +47,28 @@ public:
 	virtual float calcReflectionRay(const Point3 &reflectionPoint, const Vec3 &rayVec, Vec3 &reflectionRay) = 0;
 	virtual float calcRefractionRay(const Point3 &refractionPoint, const Vec3 &rayVec, Vec3 &refractionRay, bool isEntry) = 0;
 
-	float getReflectionFactor()
+	float getReflectionFactor() const
 	{
 		return reflectionFactor;
 	}
 
-	float getRefractionFactor()
+	float getRefractionFactor() const
 	{
 		return refractionFactor;
 	}
 
-	float getRefractionEta()
+	float getRefractionEta() const
 	{
 		return refractionEta;
 	}
 
-protected:
+	const Color &getColor() const
+	{
+		return color;
+	}
+
+protected:	
+	Color color;
 	float reflectionFactor;
 	float refractionFactor;
 	float refractionEta;
@@ -75,9 +82,8 @@ class Sphere : public Object
 public:
 
 	Sphere(Point3 center, Color color, float radius, float reflectionFactor, float refractionFactor, float refractionEta) :
-		Object(reflectionFactor, refractionFactor, refractionEta),
+		Object(color, reflectionFactor, refractionFactor, refractionEta),
 		center(center),
-		color(color), 
 		radius(radius)
 	{
 		radiusSquare = radius * radius;
@@ -114,7 +120,7 @@ public:
 
 		if (!getIntersection(emitPoint, endPoint - emitPoint, Intersection, isInMedium)) return false;
 
-		if ((Intersection.entryPoint - endPoint) * (Intersection.entryPoint - emitPoint) > 0) return false;
+		//if ((Intersection.entryPoint - endPoint) * (Intersection.entryPoint - emitPoint) > 0) return false;
 
 		return true;
 	}
@@ -165,7 +171,6 @@ public:
 
 private:
 	Point3 center;
-	Color color;
 	float radius;
 	float radiusSquare;
 };

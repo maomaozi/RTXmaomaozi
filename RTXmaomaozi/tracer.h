@@ -26,12 +26,13 @@ private:
 			// if any object block this light source 
 			if ((*objIter)->getIntersection(emitPoint, lightSource.position, getIntersection, false))
 			{
-				return Color(0, 0, 0);
+				// global light
+				return globalLight;
 			}
 		}
 
 		// Else return light information
-		return lightSource.color * lightSource.strength;
+		return (globalLight + lightSource.color) * lightSource.strength;
 	}
 
 
@@ -95,12 +96,13 @@ private:
 		// step 4:	Process reflection, calculate reflection ray and recursion trace
 		Vec3 reflectionRay(0, 0, 0);
 		float strengthReflection = firstIntersection.obj->calcReflectionRay(firstIntersection.entryPoint, rayVec, reflectionRay);
-		color += castTraceRay(firstIntersection.entryPoint, reflectionRay, isInMedium, nowDepth - 1) * strengthReflection;;
+
+		color += castTraceRay(firstIntersection.entryPoint, reflectionRay, isInMedium, nowDepth - 1) * strengthReflection;
 
 		// step 5:	Process refraction, calculate refraction ray and recursion trace
-		Vec3 refractionRay(0, 0, 0);
-		float strengthRefraction = firstIntersection.obj->calcRefractionRay(firstIntersection.entryPoint, rayVec, refractionRay, isInMedium);
-		color += castTraceRay(firstIntersection.entryPoint, refractionRay, !isInMedium, nowDepth - 1) * strengthRefraction;
+		//Vec3 refractionRay(0, 0, 0);
+		//float strengthRefraction = firstIntersection.obj->calcRefractionRay(firstIntersection.entryPoint, rayVec, refractionRay, isInMedium);
+		//color += castTraceRay(firstIntersection.entryPoint, refractionRay, isInMedium, nowDepth - 1) * strengthRefraction;
 
 		return color;
 	}
@@ -123,7 +125,7 @@ public:
 		backgroundColor = bgColor;
 
 		// calculate color of each pixel
-//#pragma omp parallel for
+#pragma omp parallel for
 		for (int y = 1; y <= resolutionHeight; ++y) 
 		{
 			for (int x = 0; x < resolutionWidth; ++x) 
@@ -135,6 +137,7 @@ public:
 
 private:
 	Color backgroundColor;
+	Color globalLight = Color(30, 30, 30);
 	std::vector<std::shared_ptr<Object>> objects;						// store all objects
 	std::vector<std::shared_ptr<Light>> lights;							// use dot light here
 };

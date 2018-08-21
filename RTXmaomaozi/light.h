@@ -18,6 +18,11 @@ struct Color
 		return Color(min(r + rhs.r, 255.0f), min(g + rhs.g, 255.0f), min(b + rhs.b, 255.0f));
 	}
 
+	Color operator-(const Color &rhs) const
+	{
+		return Color(max(r - rhs.r, 0.0f), max(g - rhs.g, 0.0f), max(b - rhs.b, 0.0f));
+	}
+
 	UINT32 getColor() const
 	{
 		return ((UINT32)r << 16) | ((UINT32)g << 8) | (UINT32)b;
