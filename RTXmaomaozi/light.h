@@ -43,11 +43,12 @@ struct Color
 
 struct light 
 {
-	light(point3 position, int strength) : position(position), strength(strength)
+	light(Point3 position, Color color, int strength) : position(position), color(color), strength(strength)
 	{
 		;
 	}
 
-	point3 position;
+	Point3 position;
 	int strength;
+	Color color;
 };

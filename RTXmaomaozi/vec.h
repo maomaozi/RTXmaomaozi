@@ -21,11 +21,11 @@
 
 
 
-struct struct3 
+struct Struct3 
 {
-	struct3(float x, float y, float z) : x(x), y(y), z(z) {}
+	Struct3(float x, float y, float z) : x(x), y(y), z(z) {}
 
-	struct3 &operator+=(const struct3 &rhs)
+	Struct3 &operator+=(const Struct3 &rhs)
 	{
 		x += rhs.x;
 		y += rhs.y;
@@ -35,7 +35,7 @@ struct struct3
 	}
 
 
-	struct3 &operator-=(const struct3 &rhs)
+	Struct3 &operator-=(const Struct3 &rhs)
 	{
 		x -= rhs.x;
 		y -= rhs.y;
@@ -45,7 +45,7 @@ struct struct3
 	}
 
 
-	bool operator==(const struct3 &rhs) const
+	bool operator==(const Struct3 &rhs) const
 	{
 		return x == rhs.x && y == rhs.y && z == rhs.z;
 	}
@@ -57,41 +57,41 @@ struct struct3
 };
 
 
-struct vec3 : public struct3
+struct Vec3 : public Struct3
 {
 
-	vec3() = delete;
+	Vec3() = delete;
 
-	vec3(float x, float y, float z) : struct3(x, y, z)
+	Vec3(float x, float y, float z) : Struct3(x, y, z)
 	{
 		;
 	}
 
 
-	float dot(const vec3 &rhs) const
+	float dot(const Vec3 &rhs) const
 	{
 		return x * rhs.x + y * rhs.y + z * rhs.z;
 	}
 
 
-	vec3 xmul(const vec3 &rhs) const
+	Vec3 xmul(const Vec3 &rhs) const
 	{
-		return vec3(y * rhs.z - rhs.y * z, z * rhs.x - rhs.z * x, x * rhs.y - rhs.x * y);
+		return Vec3(y * rhs.z - rhs.y * z, z * rhs.x - rhs.z * x, x * rhs.y - rhs.x * y);
 	}
 
 
-	vec3 normalize() const
+	Vec3 normalize() const
 	{
 		float len = length();
 
 		if(len == 0)
 		{
-			return vec3(1, 0, 0);
+			return Vec3(1, 0, 0);
 		}
 
 		len += EPSILON;
 
-		return vec3(x / len, y / len, z / len);
+		return Vec3(x / len, y / len, z / len);
 	}
 
 
@@ -101,11 +101,11 @@ struct vec3 : public struct3
 	}
 
 
-	float angle(const vec3 &rhs) const
+	float angle(const Vec3 &rhs) const
 	{
 
-		vec3 vec1 = this->normalize();
-		vec3 vec2 = rhs.normalize();
+		Vec3 vec1 = this->normalize();
+		Vec3 vec2 = rhs.normalize();
 
 		float tmp = vec1 * vec2;
 
@@ -118,76 +118,82 @@ struct vec3 : public struct3
 
 		return angle;
 
-		//vec3 axis = this->xmul(vec2);
+		//Vec3 axis = this->xmul(vec2);
 
-		//return axis * vec3(0.0f, 0.0f, 1.0f) > 0.0f ? angle : 2 * PI - angle;
+		//return axis * Vec3(0.0f, 0.0f, 1.0f) > 0.0f ? angle : 2 * PI - angle;
 	}
 
 
-	vec3 operator+(const vec3 &rhs) const
+	Vec3 operator+(const Vec3 &rhs) const
 	{
-		return vec3(rhs.x + x, rhs.y + y, rhs.z + z);
+		return Vec3(rhs.x + x, rhs.y + y, rhs.z + z);
 	}
 
 
-	vec3 operator-(const vec3 &rhs) const
+	Vec3 operator-(const Vec3 &rhs) const
 	{
-		return vec3(x - rhs.x, y - rhs.y, z - rhs.z);
+		return Vec3(x - rhs.x, y - rhs.y, z - rhs.z);
 	}
 
 
-	float operator*(const vec3 &rhs) const
+	Vec3 operator*(float rhs) const
+	{
+		return Vec3(x * rhs, y * rhs, z * rhs);
+	}
+
+
+	float operator*(const Vec3 &rhs) const
 	{
 		return dot(rhs);
 	}
 
 
-	vec3 operator-() const
+	Vec3 operator-() const
 	{
-		return vec3(-x, -y, -z);
+		return Vec3(-x, -y, -z);
 	}
 };
 
 
-struct point3 : public struct3
+struct Point3 : public Struct3
 {
-	point3() = delete;
+	Point3() = delete;
 
-	point3(float x, float y, float z) : struct3(x, y, z)
+	Point3(float x, float y, float z) : Struct3(x, y, z)
 	{
 		;
 	}
 
 
-	float distance(const point3 &rhs)
+	float distance(const Point3 &rhs)
 	{
 		return sqrtf(powf(x - rhs.x, 2) + powf(y - rhs.y, 2) + powf(z - rhs.z, 2));
 	}
 
 
 	//	move point alone vector
-	point3 operator+(const vec3 &rhs) const
+	Point3 operator+(const Vec3 &rhs) const
 	{
-		return point3(x + rhs.x, y + rhs.y, z + rhs.z);
+		return Point3(x + rhs.x, y + rhs.y, z + rhs.z);
 	}
 
 
 	//	move point alone vector
-	point3 operator-(const vec3 &rhs) const
+	Point3 operator-(const Vec3 &rhs) const
 	{
-		return point3(x - rhs.x, y - rhs.y, z - rhs.z);
+		return Point3(x - rhs.x, y - rhs.y, z - rhs.z);
 	}
 
 
 	//	calculate vector between two points
-	vec3 operator-(const point3 &rhs) const
+	Vec3 operator-(const Point3 &rhs) const
 	{
-		return vec3(x - rhs.x, y - rhs.y, z - rhs.z);
+		return Vec3(x - rhs.x, y - rhs.y, z - rhs.z);
 	}
 
 
-	point3 operator-() const
+	Point3 operator-() const
 	{
-		return point3(-x, -y, -z);
+		return Point3(-x, -y, -z);
 	}
 };
