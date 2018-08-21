@@ -32,12 +32,12 @@ private:
 		}
 
 		// Else return light information
-		return (globalLight + lightSource.color) * lightSource.strength;
+		return lightSource.color * lightSource.strength + globalLight;
 	}
 
 
 	// Cast a ray to object and get the color of it
-	Color castTraceRay(const Point3 &emitPoint, const Vec3 &rayVec, bool isInMedium, size_t nowDepth)
+	Color castTraceRay(const Point3 &emitPoint, const Vec3 &rayVec, Object *castObj, bool isInMedium, size_t nowDepth)
 	{
 		// Step 1:	determine if depth reach max trace depth
 		if (nowDepth == 0)
@@ -60,11 +60,11 @@ private:
 			Intersection intersection;
 			if ((*objIter)->getIntersection(emitPoint, rayVec, intersection, isInMedium))
 			{
-				isFound = true;
 				float distance = intersection.entryPoint.distance(emitPoint);
 
-				if (distance < firstIntersectionDistance)
+				if (distance < firstIntersectionDistance && (isInMedium || castObj != objIter->get()))
 				{
+					isFound = true;
 					firstIntersection = intersection;
 					firstIntersectionDistance = distance;
 				}
@@ -74,7 +74,7 @@ private:
 		// no intersection, return background color
 		if (!isFound)
 		{
-			return backgroundColor;
+			return globalLight;
 		}
 
 		// step 3:	cast shadow ray to light source
@@ -89,20 +89,28 @@ private:
 		{
 			for (auto lightIter = lights.begin(); lightIter != lights.end(); ++lightIter)
 			{
-				color += castShadowRay(**lightIter, firstIntersection.entryPoint, (*lightIter)->position - firstIntersection.entryPoint);
+				// Only process direct reflactor(illuminate by light source or background light)
+				color += castShadowRay(**lightIter, firstIntersection.entryPoint, (*lightIter)->position - firstIntersection.entryPoint) * firstIntersection.obj->getReflectionFactor();
 			}
 		}
 
-		// step 4:	Process reflection, calculate reflection ray and recursion trace
+		// step 4:	Process refraction, calculate refraction ray and recursion trace
+		Vec3 refractionRay(0, 0, 0);
+		float strengthRefraction = firstIntersection.obj->calcRefractionRay(firstIntersection.entryPoint, rayVec, refractionRay, isInMedium);
+		color += castTraceRay(firstIntersection.entryPoint, refractionRay, firstIntersection.obj, !isInMedium, nowDepth - 1) * strengthRefraction;
+
+		// step 5:	Process reflection, calculate reflection ray and recursion trace
 		Vec3 reflectionRay(0, 0, 0);
 		float strengthReflection = firstIntersection.obj->calcReflectionRay(firstIntersection.entryPoint, rayVec, reflectionRay);
 
-		color += castTraceRay(firstIntersection.entryPoint, reflectionRay, isInMedium, nowDepth - 1) * strengthReflection;
+		if (strengthRefraction == 0)
+		{
+			 //total reflection
+			strengthReflection += firstIntersection.obj->getRefractionFactor();
+		}
 
-		// step 5:	Process refraction, calculate refraction ray and recursion trace
-		//Vec3 refractionRay(0, 0, 0);
-		//float strengthRefraction = firstIntersection.obj->calcRefractionRay(firstIntersection.entryPoint, rayVec, refractionRay, isInMedium);
-		//color += castTraceRay(firstIntersection.entryPoint, refractionRay, isInMedium, nowDepth - 1) * strengthRefraction;
+		color += castTraceRay(firstIntersection.entryPoint, reflectionRay, firstIntersection.obj, isInMedium, nowDepth - 1) * strengthReflection;
+
 
 		return color;
 	}
@@ -130,14 +138,15 @@ public:
 		{
 			for (int x = 0; x < resolutionWidth; ++x) 
 			{
-				bitmap[x + (resolutionHeight - y) * resolutionWidth] = castTraceRay(viewPoint, Point3(x, y, 0) - viewPoint, false, traceDepth).getColor();
+				//if (resolutionHeight - y == 540 && x == 810)
+				bitmap[x + (resolutionHeight - y) * resolutionWidth] = castTraceRay(viewPoint, Point3(x, y, 0) - viewPoint, nullptr, false, traceDepth).getColor();
 			}
 		}
 	}
 
 private:
 	Color backgroundColor;
-	Color globalLight = Color(30, 30, 30);
+	Color globalLight = Color(50, 50, 50);
 	std::vector<std::shared_ptr<Object>> objects;						// store all objects
 	std::vector<std::shared_ptr<Light>> lights;							// use dot light here
 };

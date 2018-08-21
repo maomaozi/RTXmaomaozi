@@ -159,7 +159,7 @@ public:
 		else 
 			eta = refractionEtaEntry;
 
-		Vec3 normVec = (refractionPoint - center).normalize();
+		Vec3 normVec = (refractionPoint - center).normalize() * (isInMedium ? -1 : 1);
 		Vec3 rayVecNorm = rayVec.normalize();
 
 		float cosi = -rayVecNorm * normVec;
