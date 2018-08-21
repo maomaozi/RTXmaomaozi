@@ -13,14 +13,14 @@ struct Color
 		;
 	}
 
-	Color &operator+(const Color &rhs) const
+	Color operator+(const Color &rhs) const
 	{
 		return Color(min(r + rhs.r, 255.0f), min(g + rhs.g, 255.0f), min(b + rhs.b, 255.0f));
 	}
 
 	UINT32 getColor() const
 	{
-		return ((UINT32)r << 16) & ((UINT32)g << 8) & (UINT32)b;
+		return ((UINT32)r << 16) | ((UINT32)g << 8) | (UINT32)b;
 	}
 
 	void operator+=(const Color &rhs)
@@ -30,7 +30,7 @@ struct Color
 		b = min(b + rhs.b, 255.0f);
 	}
 
-	Color &operator*(float factor) const
+	Color operator*(float factor) const
 	{
 		return Color(min(r * factor, 255.0f), min(g  * factor, 255.0f), min(b  * factor, 255.0f));
 	}
@@ -41,14 +41,14 @@ struct Color
 };
 
 
-struct light 
+struct Light 
 {
-	light(Point3 position, Color color, int strength) : position(position), color(color), strength(strength)
+	Light(Point3 position, Color color, float strength) : position(position), color(color), strength(strength)
 	{
 		;
 	}
 
 	Point3 position;
-	int strength;
+	float strength;
 	Color color;
 };

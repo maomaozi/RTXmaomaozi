@@ -32,16 +32,19 @@ class Object
 
 public:
 
-	Object(float reflectionFactor, float refractionFactor) : reflectionFactor(reflectionFactor), refractionFactor(refractionFactor) 
+	Object(float reflectionFactor, float refractionFactor, float refractionEta) :
+		reflectionFactor(reflectionFactor), 
+		refractionFactor(refractionFactor),
+		refractionEta(refractionEta)
 	{
-		;
+		refractionEtaEntry = 1.0f / refractionEta;
 	}
 
-	virtual bool getIntersection(const Point3 &emitPoint, const Vec3 &rayVec, Intersection &IntersectionPoint) = 0;
-	virtual bool getIntersection(const Point3 &emitPoint, const Point3 &endPoint, Intersection &IntersectionPoint) = 0;
+	virtual bool getIntersection(const Point3 &emitPoint, const Vec3 &rayVec, Intersection &Intersection, bool isInMedium) = 0;
+	virtual bool getIntersection(const Point3 &emitPoint, const Point3 &endPoint, Intersection &Intersection, bool isInMedium) = 0;
 
-	virtual float calcReflectionRay(const Point3 &emitPoint, const Vec3 &rayVec, Vec3 &reflectionRay) = 0;
-	virtual float calcRefractionRay(const Point3 &emitPoint, const Vec3 &rayVec, Vec3 &refractionRay) = 0;
+	virtual float calcReflectionRay(const Point3 &reflectionPoint, const Vec3 &rayVec, Vec3 &reflectionRay) = 0;
+	virtual float calcRefractionRay(const Point3 &refractionPoint, const Vec3 &rayVec, Vec3 &refractionRay, bool isEntry) = 0;
 
 	float getReflectionFactor()
 	{
@@ -53,19 +56,26 @@ public:
 		return refractionFactor;
 	}
 
-private:
+	float getRefractionEta()
+	{
+		return refractionEta;
+	}
+
+protected:
 	float reflectionFactor;
-	float refractionFactor; 
+	float refractionFactor;
+	float refractionEta;
+	float refractionEtaEntry;
 };
 
 
 
-class sphere : public Object 
+class Sphere : public Object 
 {
 public:
 
-	sphere(Point3 center, Color color, float radius, float reflectionFactor, float refractionFactor) :
-		Object(reflectionFactor, refractionFactor), 
+	Sphere(Point3 center, Color color, float radius, float reflectionFactor, float refractionFactor, float refractionEta) :
+		Object(reflectionFactor, refractionFactor, refractionEta),
 		center(center),
 		color(color), 
 		radius(radius)
@@ -74,7 +84,7 @@ public:
 	}
 
 
-	bool getIntersection(const Point3 &emitPoint, const Vec3 &rayVec, Intersection &IntersectionPoint)
+	bool getIntersection(const Point3 &emitPoint, const Vec3 &rayVec, Intersection &Intersection, bool isInMedium)
 	{
 
 		Vec3 sphereDist = center - emitPoint;
@@ -89,36 +99,68 @@ public:
 
 		if (sphereRayDistSquare >= radiusSquare) return false;
 
-		float intersectionDist = sphereDistProjectOnRay - sqrt(radiusSquare - sphereRayDistSquare);
+		float intersectionDist = sphereDistProjectOnRay + (isInMedium ? 1 : -1) * sqrt(radiusSquare - sphereRayDistSquare);
 
-		IntersectionPoint.obj = this;
-		IntersectionPoint.entryPoint = emitPoint + rayDirect * intersectionDist;
-
-		return true;
-	}
-
-
-	bool getIntersection(const Point3 &emitPoint, const Point3 &endPoint, Intersection &IntersectionPoint)
-	{
-		// if a line section intersection with sphere
-
-		if (!getIntersection(emitPoint, endPoint - emitPoint, IntersectionPoint)) return false;
-
-		if ((IntersectionPoint.entryPoint - endPoint) * (IntersectionPoint.entryPoint - emitPoint) > 0) return false;
+		Intersection.obj = this;
+		Intersection.entryPoint = emitPoint + rayDirect * intersectionDist;
 
 		return true;
 	}
 
 
-	float calcReflectionRay(const Point3 &emitPoint, const Vec3 &rayVec, Vec3 &reflectionRay)
+	bool getIntersection(const Point3 &emitPoint, const Point3 &endPoint, Intersection &Intersection, bool isInMedium)
 	{
-		return 0.0f;
+		// if a line section intersection with Sphere
+
+		if (!getIntersection(emitPoint, endPoint - emitPoint, Intersection, isInMedium)) return false;
+
+		if ((Intersection.entryPoint - endPoint) * (Intersection.entryPoint - emitPoint) > 0) return false;
+
+		return true;
 	}
 
 
-	float calcRefractionRay(const Point3 &emitPoint, const Vec3 &rayVec, Vec3 &refractionRay)
+	float calcReflectionRay(const Point3 &reflectionPoint, const Vec3 &rayVec, Vec3 &reflectionRay)
 	{
-		return 0.0f;
+		Vec3 normVec = (reflectionPoint - center).normalize();
+		// Vec3 rayVecNorm = rayVec.normalize();
+
+		// R = I - 2 * (I * N) * N
+		reflectionRay = rayVec - normVec * 2 * (rayVec * normVec);
+
+		return reflectionFactor;
+	}
+
+
+	float calcRefractionRay(const Point3 &refractionPoint, const Vec3 &rayVec, Vec3 &refractionRay, bool isInMedium)
+	{
+		// copy from Nvidia
+
+		/*
+		
+		float3 refract( float3 i, float3 n, float eta )
+		{
+			float cosi = dot(-i, n);
+			float cost2 = 1.0f - eta * eta * (1.0f - cosi * cosi);
+			float3 t = eta * i + (eta * cosi - sqrt(abs(cost2))) * n;
+			return t * (float3)(cost2 > 0);
+		}
+		*/
+		float eta = refractionEta;
+
+		if (isInMedium)
+			eta = refractionEta;
+		else 
+			eta = refractionEtaEntry;
+
+		Vec3 normVec = (refractionPoint - center).normalize();
+		Vec3 rayVecNorm = rayVec.normalize();
+
+		float cosi = -rayVecNorm * normVec;
+		float cost2 = 1.0f - eta * eta * (1.0f - cosi * cosi);
+		refractionRay = rayVecNorm * eta + normVec * (eta * cosi - sqrt(fabs(cost2)));
+
+		return refractionFactor * (cost2 > 0);
 	}
 
 private:
