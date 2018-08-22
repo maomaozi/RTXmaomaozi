@@ -18,4 +18,4 @@
 
 Demo:
 
-![Demo](http://121.49.97.197:10101/maozi/RTXmaomaozi/blob/5d37c5a58ec4b693e7d725d813597045fa604c82/demo.png "Demo")
+![Demo](http://121.49.97.197:10101/maozi/RTXmaomaozi/raw/5d37c5a58ec4b693e7d725d813597045fa604c82/demo.png "Demo")
