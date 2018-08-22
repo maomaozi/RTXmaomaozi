@@ -19,12 +19,12 @@ private:
 		// Check if any object between lightSource and emitPoint
 		// If there is something, return 0
 
-		Intersection getIntersection;
+		Intersection intersection;
 
 		for (auto objIter = objects.begin(); objIter != objects.end(); ++objIter)
 		{
 			// if any object block this light source 
-			if ((*objIter)->getIntersection(emitPoint, lightSource.position, getIntersection, false))
+			if ((*objIter)->getIntersection(emitPoint, lightSource.position, intersection, false))
 			{
 				// global light
 				return globalLight;
@@ -46,21 +46,8 @@ private:
 	}
 
 
-	// Cast a ray to object and get the color of it
-	Color castTraceRay(const Point3 &emitPoint, const Vec3 &rayVec, Object *castObj, bool isInMedium, size_t nowDepth)
+	bool getFirstIntersection(const Point3 &emitPoint, const Vec3 &rayVec, bool isInMedium, Object *castObj, Intersection &firstIntersection)
 	{
-		// Step 1:	determine if depth reach max trace depth
-		if (nowDepth == 0)
-		{
-			// No contribute
-			return Color(0, 0, 0);
-		}
-
-		// Step 2:	Go through each object and calculate intersection
-		//			find which intersection is most near the emitPoint
-		//			if there is no intersection, return background color
-
-		Intersection firstIntersection;					// The most near intersection with object
 		float firstIntersectionDistance = FLT_MAX;		// The most near intersection distance
 		bool isFound = false;							// If we got any intersection
 
@@ -81,9 +68,30 @@ private:
 			}
 		}
 
-		// No intersection, return background color
-		if (!isFound)
+		return isFound;
+	}
+
+
+	// Cast a ray to object and get the color of it
+	Color castTraceRay(const Point3 &emitPoint, const Vec3 &rayVec, Object *castObj, bool isInMedium, size_t nowDepth)
+	{
+		// Step 1:	determine if depth reach max trace depth
+		if (nowDepth == 0)
 		{
+			// No contribute
+			return Color(0, 0, 0);
+		}
+
+		// Step 2:	Go through each object and calculate intersection
+		//			find which intersection is most near the emitPoint
+		//			if there is no intersection, return background color
+
+
+		Intersection firstIntersection;
+
+		if (!getFirstIntersection(emitPoint, rayVec, isInMedium, castObj, firstIntersection))
+		{
+			// No intersection, return background color
 			return backgroundColor;
 		}
 
@@ -156,8 +164,8 @@ public:
 			{
 				for (int x = 0; x < resolutionWidth; ++x)
 				{
-					//if (resolutionHeight - y == 540 && x == 810)
-					bitmap[x + (resolutionHeight - y) * resolutionWidth] = castTraceRay(viewPoint, Point3(x, y, 0) - viewPoint, nullptr, false, traceDepth).getColor();
+					
+					bitmap[x + (resolutionHeight - y) * resolutionWidth] = castTraceRay(viewPoint, (Point3(x, y, 0) - viewPoint).normalize(), nullptr, false, traceDepth).getColor();
 				}
 			}
 		}

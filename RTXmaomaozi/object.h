@@ -88,9 +88,9 @@ public:
 	{
 
 		Vec3 sphereDist = center - emitPoint;
-		Vec3 rayDirect = rayVec.normalize();
+		//Vec3 rayDirect = rayVec.normalize();
 
-		float sphereDistProjectOnRay = rayDirect * sphereDist;
+		float sphereDistProjectOnRay = rayVec * sphereDist;
 
 		if (sphereDistProjectOnRay < 0) return false;
 
@@ -102,7 +102,7 @@ public:
 		float intersectionDist = sphereDistProjectOnRay + (isInMedium ? 1 : -1) * sqrt(radiusSquare - sphereRayDistSquare);
 
 		Intersection.obj = this;
-		Intersection.entryPoint = emitPoint + rayDirect * intersectionDist;
+		Intersection.entryPoint = emitPoint + rayVec * intersectionDist;
 
 		return true;
 	}
@@ -112,7 +112,7 @@ public:
 	{
 		// if a line section intersection with Sphere
 
-		if (!getIntersection(emitPoint, endPoint - emitPoint, Intersection, isInMedium)) return false;
+		if (!getIntersection(emitPoint, (endPoint - emitPoint).normalize(), Intersection, isInMedium)) return false;
 
 		//if ((Intersection.entryPoint - endPoint) * (Intersection.entryPoint - emitPoint) > 0) return false;
 
@@ -123,7 +123,7 @@ public:
 	void calcReflectionRay(const Point3 &reflectionPoint, const Vec3 &rayVec, Vec3 &reflectionRay)
 	{
 		Vec3 normVec = (reflectionPoint - center).normalize();
-		// Vec3 rayVecNorm = rayVec.normalize();
+		//Vec3 rayVecNorm = rayVec.normalize();
 
 		// R = I - 2 * (I * N) * N
 		reflectionRay = rayVec - normVec * 2 * (rayVec * normVec);
@@ -144,19 +144,14 @@ public:
 			return t * (float3)(cost2 > 0);
 		}
 		*/
-		float eta = refractionEta;
-
-		if (isInMedium)
-			eta = refractionEta;
-		else 
-			eta = refractionEtaEntry;
+		float eta = isInMedium ? refractionEta : refractionEtaEntry;
 
 		Vec3 normVec = (refractionPoint - center).normalize() * (isInMedium ? -1 : 1);
-		Vec3 rayVecNorm = rayVec.normalize();
+		//Vec3 rayVecNorm = rayVec.normalize();
 
-		float cosi = -rayVecNorm * normVec;
+		float cosi = -rayVec * normVec;
 		float cost2 = 1.0f - eta * eta * (1.0f - cosi * cosi);
-		refractionRay = rayVecNorm * eta + normVec * (eta * cosi - sqrt(fabs(cost2)));
+		refractionRay = rayVec * eta + normVec * (eta * cosi - sqrt(fabs(cost2)));
 
 		return cost2 <= 0;
 	}

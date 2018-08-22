@@ -1,6 +1,7 @@
 #pragma once
 #include "vec.h"
 
+
 struct Color
 {
 	Color() : r(0), g(0), b(0)
@@ -68,4 +69,26 @@ struct Light
 	Point3 position;
 	float strength;
 	Color color;
+};
+
+
+struct Object;
+
+
+struct Ray 
+{
+	Ray() : emitPoint(0,0,0), rayVec(0,0,0)
+	{
+		;
+	}
+
+	Ray(const Point3 &emitPoint, const Vec3 &rayVec, Object* castObj) : 
+		emitPoint(emitPoint), rayVec(rayVec), castObj(castObj)
+	{
+		;
+	}
+
+	Point3 emitPoint;
+	Vec3 rayVec;
+	Object *castObj;
 };
