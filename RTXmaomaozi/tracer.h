@@ -3,7 +3,9 @@
 #include "vec.h"
 #include "object.h"
 #include "light.h"
-#include <float.h>
+#include "camera.h"
+
+
 
 class Tracer
 {
@@ -152,7 +154,7 @@ public:
 		lights.emplace_back(light);
 	}
 
-	void trace(size_t resolutionWidth, size_t resolutionHeight, const Point3 viewPoint, size_t traceDepth, Color bgColor, UINT32 *bitmap)
+	void trace(Camera camera, size_t traceDepth, Color bgColor, UINT32 *bitmap)
 	{
 		backgroundColor = globalLight = bgColor;
 
@@ -160,12 +162,12 @@ public:
 #pragma omp parallel
 		{
 #pragma omp for nowait schedule(static, 1)
-			for (int y = 1; y <= resolutionHeight; ++y)
+			for (int y = 1; y <= (int)camera.getHeight(); ++y)
 			{
-				for (int x = 0; x < resolutionWidth; ++x)
+				for (int x = 0; x < (int)camera.getWidth(); ++x)
 				{
-					
-					bitmap[x + (resolutionHeight - y) * resolutionWidth] = castTraceRay(viewPoint, (Point3(x, y, 0) - viewPoint).normalize(), nullptr, false, traceDepth).getColor();
+					bitmap[x + ((int)camera.getHeight() - y) * (int)camera.getWidth()] = 
+						castTraceRay(camera.getViewPoint(), camera.getViewRay(x, y), nullptr, false, traceDepth).getColor();
 				}
 			}
 		}
