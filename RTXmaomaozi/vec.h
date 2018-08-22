@@ -1,7 +1,7 @@
 #pragma once
 #include "stdafx.h"
 
-#define EPSILON 1e-5f
+#define EPSILON 0.001f
 #define PI 3.14159265358979f
 
 

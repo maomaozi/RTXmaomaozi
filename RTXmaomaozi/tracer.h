@@ -28,7 +28,7 @@ private:
 			// if any object block this light source 
 			float distance = (*objIter)->getIntersection(emitPoint, (lightSource.position - emitPoint).normalize(), false);
 
-			if (distance != -1.0f && distance < lightDistance)
+			if (distance != NO_INTERSECTION && distance < lightDistance)
 			{
 				// block by some object front fo light source
 				// global light

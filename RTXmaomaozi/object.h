@@ -2,6 +2,9 @@
 
 #include "light.h"
 
+#define NO_INTERSECTION -1.0f
+
+
 class Object;
 
 
@@ -32,10 +35,11 @@ class Object
 
 public:
 
-	Object(const Color &reflectionRatio, float refractionRatio, float refractionEta) :
+	Object(const Color &reflectionRatio, float refractionRatio, float refractionEta, float diffuseFactor) :
 		reflectionRatio(reflectionRatio),
 		refractionRatio(refractionRatio),
-		refractionEta(refractionEta)
+		refractionEta(refractionEta),
+		diffuseFactor(diffuseFactor)
 	{
 		refractionEtaEntry = 1.0f / refractionEta;
 	}
@@ -68,6 +72,7 @@ protected:
 	float refractionRatio;
 	float refractionEta;
 	float refractionEtaEntry;
+	float diffuseFactor;
 };
 
 
@@ -76,8 +81,8 @@ class Sphere : public Object
 {
 public:
 
-	Sphere(Point3 center, float radius, const Color &reflectionRatio, float refractionRatio, float refractionEta) :
-		Object(reflectionRatio, refractionRatio, refractionEta),
+	Sphere(const Point3 &center, float radius, const Color &reflectionRatio, float refractionRatio, float refractionEta, float diffuseFactor) :
+		Object(reflectionRatio, refractionRatio, refractionEta, diffuseFactor),
 		center(center),
 		radius(radius)
 	{
@@ -98,12 +103,12 @@ public:
 
 		float sphereDistProjectOnRay = rayVec * sphereDist;
 
-		if (sphereDistProjectOnRay < 0) return -1.0f;
+		if (sphereDistProjectOnRay < 0) return NO_INTERSECTION;
 
 		float sphereDistSquare = sphereDist * sphereDist;
 		float sphereRayDistSquare = sphereDistSquare - sphereDistProjectOnRay * sphereDistProjectOnRay;
 
-		if (sphereRayDistSquare >= radiusSquare) return -1.0f;
+		if (sphereRayDistSquare >= radiusSquare) return NO_INTERSECTION;
 
 		float intersectionDist = sphereDistProjectOnRay + (isInMedium ? 1.0f : -1.0f) * sqrt(radiusSquare - sphereRayDistSquare);
 
@@ -151,4 +156,55 @@ private:
 	Point3 center;
 	float radius;
 	float radiusSquare;
+};
+
+
+class Plane : public Object
+{
+public:
+
+	Plane(const Vec3 &normVec, const Point3 &pointOnPlane, const Color &reflectionRatio, float diffuseFactor) :
+		Object(reflectionRatio, 0, 1.0f, diffuseFactor),
+		normVec(normVec.normalize()),
+		pointOnPlane(pointOnPlane)
+	{
+		;
+	}
+
+
+	void getNormVecAt(const Point3 &point, Vec3 &norm) const
+	{
+		norm = normVec;
+	}
+
+	float getIntersection(const Point3 &emitPoint, const Vec3 &rayVec, bool isInMedium) const
+	{
+		float dot1 = normVec * rayVec;
+
+		if (fabs(dot1) < 0.001) return NO_INTERSECTION;
+
+		float t = normVec * (pointOnPlane - (emitPoint + rayVec * EPSILON)) / (normVec * rayVec);
+
+		if (t < 0) return NO_INTERSECTION;
+
+		return t;
+		
+	}
+
+
+	void calcReflectionRay(const Point3 &reflectionPoint, const Vec3 &rayVec, Vec3 &reflectionRay) const
+	{
+		// R = I - 2 * (I * N) * N
+		reflectionRay = rayVec - normVec * 2 * (rayVec * normVec);
+	}
+
+
+	bool calcRefractionRay(const Point3 &refractionPoint, const Vec3 &rayVec, Vec3 &refractionRay, bool isInMedium) const
+	{
+		return false;
+	}
+
+private:
+	Vec3 normVec;
+	Point3 pointOnPlane;
 };
