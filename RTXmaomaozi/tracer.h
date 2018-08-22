@@ -16,25 +16,28 @@ public:
 
 private:
 
-	Color castShadowRay(const Light &lightSource, const Point3 &emitPoint, const Vec3 &rayVec)
+	Color castShadowRay(const Light &lightSource, const Point3 &emitPoint)
 	{
 		// Check if any object between lightSource and emitPoint
 		// If there is something, return 0
 
-		Intersection intersection;
+		float lightDistance = (lightSource.position - emitPoint).length();
 
 		for (auto objIter = objects.begin(); objIter != objects.end(); ++objIter)
 		{
 			// if any object block this light source 
-			if ((*objIter)->getIntersection(emitPoint, lightSource.position, intersection, false))
+			float distance = (*objIter)->getIntersection(emitPoint, (lightSource.position - emitPoint).normalize(), false);
+
+			if (distance != -1.0f && distance < lightDistance)
 			{
+				// block by some object front fo light source
 				// global light
-				return globalLight;
+				return Color(0, 0, 0);
 			}
 		}
 
 		// Else return light information
-		return lightSource.color * lightSource.strength + globalLight;
+		return lightSource.color * lightSource.strength;
 	}
 
 
@@ -43,30 +46,33 @@ private:
 		for (auto lightIter = lights.begin(); lightIter != lights.end(); ++lightIter)
 		{
 			// Only process direct reflactor(illuminate by light source or background light)
-			accumulateLightColor += castShadowRay(**lightIter, nowPosition, (*lightIter)->position - nowPosition);
+			accumulateLightColor += castShadowRay(**lightIter, nowPosition);
 		}
+
+		accumulateLightColor += globalLight;
 	}
 
 
 	bool getFirstIntersection(const Point3 &emitPoint, const Vec3 &rayVec, bool isInMedium, Object *castObj, Intersection &firstIntersection)
 	{
+		// rayVec is always normalized
+
 		float firstIntersectionDistance = FLT_MAX;		// The most near intersection distance
 		bool isFound = false;							// If we got any intersection
 
 		for (auto objIter = objects.begin(); objIter != objects.end(); ++objIter)
 		{
 			// Get all intersection and then calculate distance
-			Intersection intersection;
-			if ((*objIter)->getIntersection(emitPoint, rayVec, intersection, isInMedium))
-			{
-				float distance = intersection.entryPoint.distance(emitPoint);
 
-				if (distance < firstIntersectionDistance && (isInMedium || castObj != objIter->get()))
-				{
-					isFound = true;
-					firstIntersection = intersection;
-					firstIntersectionDistance = distance;
-				}
+			float intersectionDistance = (*objIter)->getIntersection(emitPoint, rayVec, isInMedium);
+
+			if (intersectionDistance > 0 && intersectionDistance < firstIntersectionDistance && (isInMedium || castObj != objIter->get()))
+			{
+				isFound = true;
+				firstIntersectionDistance = intersectionDistance;
+
+				firstIntersection.entryPoint = emitPoint + rayVec * intersectionDistance;
+				firstIntersection.obj = objIter->get();
 			}
 		}
 

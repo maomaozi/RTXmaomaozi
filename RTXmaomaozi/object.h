@@ -40,8 +40,7 @@ public:
 		refractionEtaEntry = 1.0f / refractionEta;
 	}
 
-	virtual bool getIntersection(const Point3 &emitPoint, const Vec3 &rayVec, Intersection &Intersection, bool isInMedium) = 0;
-	virtual bool getIntersection(const Point3 &emitPoint, const Point3 &endPoint, Intersection &Intersection, bool isInMedium) = 0;
+	virtual float getIntersection(const Point3 &emitPoint, const Vec3 &rayVec, bool isInMedium) = 0;
 
 	virtual void calcReflectionRay(const Point3 &reflectionPoint, const Vec3 &rayVec, Vec3 &reflectionRay) = 0;
 	virtual bool calcRefractionRay(const Point3 &refractionPoint, const Vec3 &rayVec, Vec3 &refractionRay, bool isEntry) = 0;
@@ -84,7 +83,7 @@ public:
 	}
 
 
-	bool getIntersection(const Point3 &emitPoint, const Vec3 &rayVec, Intersection &Intersection, bool isInMedium)
+	float getIntersection(const Point3 &emitPoint, const Vec3 &rayVec, bool isInMedium)
 	{
 
 		Vec3 sphereDist = center - emitPoint;
@@ -92,31 +91,16 @@ public:
 
 		float sphereDistProjectOnRay = rayVec * sphereDist;
 
-		if (sphereDistProjectOnRay < 0) return false;
+		if (sphereDistProjectOnRay < 0) return -1.0f;
 
 		float sphereDistSquare = sphereDist * sphereDist;
 		float sphereRayDistSquare = sphereDistSquare - sphereDistProjectOnRay * sphereDistProjectOnRay;
 
-		if (sphereRayDistSquare >= radiusSquare) return false;
+		if (sphereRayDistSquare >= radiusSquare) return -1.0f;
 
-		float intersectionDist = sphereDistProjectOnRay + (isInMedium ? 1 : -1) * sqrt(radiusSquare - sphereRayDistSquare);
+		float intersectionDist = sphereDistProjectOnRay + (isInMedium ? 1.0f : -1.0f) * sqrt(radiusSquare - sphereRayDistSquare);
 
-		Intersection.obj = this;
-		Intersection.entryPoint = emitPoint + rayVec * intersectionDist;
-
-		return true;
-	}
-
-
-	bool getIntersection(const Point3 &emitPoint, const Point3 &endPoint, Intersection &Intersection, bool isInMedium)
-	{
-		// if a line section intersection with Sphere
-
-		if (!getIntersection(emitPoint, (endPoint - emitPoint).normalize(), Intersection, isInMedium)) return false;
-
-		//if ((Intersection.entryPoint - endPoint) * (Intersection.entryPoint - emitPoint) > 0) return false;
-
-		return true;
+		return intersectionDist;
 	}
 
 
