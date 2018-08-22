@@ -36,6 +36,16 @@ private:
 	}
 
 
+	void getDirectLight(const Point3 &nowPosition, Color &accumulateLightColor)
+	{
+		for (auto lightIter = lights.begin(); lightIter != lights.end(); ++lightIter)
+		{
+			// Only process direct reflactor(illuminate by light source or background light)
+			accumulateLightColor += castShadowRay(**lightIter, nowPosition, (*lightIter)->position - nowPosition);
+		}
+	}
+
+
 	// Cast a ray to object and get the color of it
 	Color castTraceRay(const Point3 &emitPoint, const Vec3 &rayVec, Object *castObj, bool isInMedium, size_t nowDepth)
 	{
@@ -71,48 +81,54 @@ private:
 			}
 		}
 
-		// no intersection, return background color
+		// No intersection, return background color
 		if (!isFound)
 		{
-			return globalLight;
+			return backgroundColor;
 		}
 
-		// step 3:	cast shadow ray to light source
+		// Step 3:	cast shadow ray to light source
 		//			if shadow ray has intersection with object
 		//			(some thing between point and light source), then cast shadow
 		//			otherwise collect each light strength and contribute to color
 
-		Color color(0, 0, 0);
+		Color reflectColor(0, 0, 0);		// Actual reflect light color
+		Color castOnColor(0, 0, 0);			// Direct and indirect light shade on this object
 
 		// Cast shadow to every light source
 		if (!isInMedium)
 		{
-			for (auto lightIter = lights.begin(); lightIter != lights.end(); ++lightIter)
-			{
-				// Only process direct reflactor(illuminate by light source or background light)
-				color += castShadowRay(**lightIter, firstIntersection.entryPoint, (*lightIter)->position - firstIntersection.entryPoint) * firstIntersection.obj->getReflectionFactor();
-			}
+			getDirectLight(firstIntersection.entryPoint, castOnColor);
 		}
 
-		// step 4:	Process refraction, calculate refraction ray and recursion trace
-		Vec3 refractionRay(0, 0, 0);
-		float strengthRefraction = firstIntersection.obj->calcRefractionRay(firstIntersection.entryPoint, rayVec, refractionRay, isInMedium);
-		color += castTraceRay(firstIntersection.entryPoint, refractionRay, firstIntersection.obj, !isInMedium, nowDepth - 1) * strengthRefraction;
-
-		// step 5:	Process reflection, calculate reflection ray and recursion trace
+		// Step 4:	Process reflection, calculate reflection ray and recursion trace
 		Vec3 reflectionRay(0, 0, 0);
-		float strengthReflection = firstIntersection.obj->calcReflectionRay(firstIntersection.entryPoint, rayVec, reflectionRay);
+		firstIntersection.obj->calcReflectionRay(firstIntersection.entryPoint, rayVec, reflectionRay);
 
-		if (strengthRefraction == 0)
+		castOnColor += castTraceRay(firstIntersection.entryPoint, reflectionRay, firstIntersection.obj, isInMedium, nowDepth - 1);
+
+		// Step 5:	Process refraction, calculate refraction ray and recursion trace
+		//			If total reflection happend, no need to calculate refraction
+		Vec3 refractionRay(0, 0, 0);
+		bool totalReflection = firstIntersection.obj->calcRefractionRay(firstIntersection.entryPoint, rayVec, refractionRay, isInMedium);
+
+
+		// Step 6: Process reflect color
+		if (totalReflection)
 		{
 			 //total reflection
-			strengthReflection += firstIntersection.obj->getRefractionFactor();
+			reflectColor += castOnColor;
+		}
+		else
+		{
+			reflectColor += castOnColor * firstIntersection.obj->getReflectionRatio();
+
+			// then add refraction
+			reflectColor += castTraceRay(firstIntersection.entryPoint, refractionRay, firstIntersection.obj, !isInMedium, nowDepth - 1) * firstIntersection.obj->getRefractionRatio();
 		}
 
-		color += castTraceRay(firstIntersection.entryPoint, reflectionRay, firstIntersection.obj, isInMedium, nowDepth - 1) * strengthReflection;
-
-
-		return color;
+		
+		return reflectColor;
 	}
 
 public:
@@ -130,23 +146,27 @@ public:
 
 	void trace(size_t resolutionWidth, size_t resolutionHeight, const Point3 viewPoint, size_t traceDepth, Color bgColor, UINT32 *bitmap)
 	{
-		backgroundColor = bgColor;
+		backgroundColor = globalLight = bgColor;
 
 		// calculate color of each pixel
-#pragma omp parallel for
-		for (int y = 1; y <= resolutionHeight; ++y) 
+#pragma omp parallel
 		{
-			for (int x = 0; x < resolutionWidth; ++x) 
+#pragma omp for nowait schedule(static, 1)
+			for (int y = 1; y <= resolutionHeight; ++y)
 			{
-				//if (resolutionHeight - y == 540 && x == 810)
-				bitmap[x + (resolutionHeight - y) * resolutionWidth] = castTraceRay(viewPoint, Point3(x, y, 0) - viewPoint, nullptr, false, traceDepth).getColor();
+				for (int x = 0; x < resolutionWidth; ++x)
+				{
+					//if (resolutionHeight - y == 540 && x == 810)
+					bitmap[x + (resolutionHeight - y) * resolutionWidth] = castTraceRay(viewPoint, Point3(x, y, 0) - viewPoint, nullptr, false, traceDepth).getColor();
+				}
 			}
 		}
 	}
 
 private:
+	Color globalLight;
 	Color backgroundColor;
-	Color globalLight = Color(50, 50, 50);
+
 	std::vector<std::shared_ptr<Object>> objects;						// store all objects
 	std::vector<std::shared_ptr<Light>> lights;							// use dot light here
 };
