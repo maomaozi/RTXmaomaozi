@@ -41,12 +41,15 @@ private:
 	}
 
 
-	void getDirectLight(const Point3 &nowPosition, Color &accumulateLightColor)
+	void getDirectLight(const Point3 &nowPoint, const Vec3 &normVector, Color &accumulateLightColor)
 	{
 		for (auto lightIter = lights.begin(); lightIter != lights.end(); ++lightIter)
 		{
 			// Only process direct reflactor(illuminate by light source or background light)
-			accumulateLightColor += castShadowRay(**lightIter, nowPosition);
+
+			float angleCos = normVector * ((*lightIter)->position - nowPoint).normalize();
+
+			accumulateLightColor += castShadowRay(**lightIter, nowPoint) * angleCos;
 		}
 
 		accumulateLightColor += globalLight;
@@ -114,7 +117,9 @@ private:
 		// Cast shadow to every light source
 		if (!isInMedium)
 		{
-			getDirectLight(firstIntersection.entryPoint, castOnColor);
+			Vec3 norm(0, 0, 0);
+			firstIntersection.obj->getNormVecAt(firstIntersection.entryPoint, norm);
+			getDirectLight(firstIntersection.entryPoint, norm, castOnColor);
 		}
 
 		// Step 4:	Process reflection, calculate reflection ray and recursion trace

@@ -40,10 +40,12 @@ public:
 		refractionEtaEntry = 1.0f / refractionEta;
 	}
 
-	virtual float getIntersection(const Point3 &emitPoint, const Vec3 &rayVec, bool isInMedium) = 0;
+	virtual float getIntersection(const Point3 &emitPoint, const Vec3 &rayVec, bool isInMedium) const = 0;
 
-	virtual void calcReflectionRay(const Point3 &reflectionPoint, const Vec3 &rayVec, Vec3 &reflectionRay) = 0;
-	virtual bool calcRefractionRay(const Point3 &refractionPoint, const Vec3 &rayVec, Vec3 &refractionRay, bool isEntry) = 0;
+	virtual void calcReflectionRay(const Point3 &reflectionPoint, const Vec3 &rayVec, Vec3 &reflectionRay) const = 0;
+	virtual bool calcRefractionRay(const Point3 &refractionPoint, const Vec3 &rayVec, Vec3 &refractionRay, bool isEntry) const  = 0;
+
+	virtual void getNormVecAt(const Point3 &point, Vec3 &norm) const = 0;
 
 	const Color &getReflectionRatio() const
 	{
@@ -83,7 +85,12 @@ public:
 	}
 
 
-	float getIntersection(const Point3 &emitPoint, const Vec3 &rayVec, bool isInMedium)
+	void getNormVecAt(const Point3 &point, Vec3 &norm) const
+	{
+		norm = (point - center).normalize();
+	}
+
+	float getIntersection(const Point3 &emitPoint, const Vec3 &rayVec, bool isInMedium) const
 	{
 
 		Vec3 sphereDist = center - emitPoint;
@@ -104,7 +111,7 @@ public:
 	}
 
 
-	void calcReflectionRay(const Point3 &reflectionPoint, const Vec3 &rayVec, Vec3 &reflectionRay)
+	void calcReflectionRay(const Point3 &reflectionPoint, const Vec3 &rayVec, Vec3 &reflectionRay) const
 	{
 		Vec3 normVec = (reflectionPoint - center).normalize();
 		//Vec3 rayVecNorm = rayVec.normalize();
@@ -114,7 +121,7 @@ public:
 	}
 
 
-	bool calcRefractionRay(const Point3 &refractionPoint, const Vec3 &rayVec, Vec3 &refractionRay, bool isInMedium)
+	bool calcRefractionRay(const Point3 &refractionPoint, const Vec3 &rayVec, Vec3 &refractionRay, bool isInMedium) const
 	{
 		// copy from Nvidia
 
