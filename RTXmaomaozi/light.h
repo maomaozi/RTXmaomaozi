@@ -24,6 +24,21 @@ struct Color
 		return Color(min(r * rhs.r, 255.0f), min(g * rhs.g, 255.0f), min(b * rhs.b, 255.0f));
 	}
 
+	Color operator/(const Color &rhs) const
+	{
+		return Color(min(r / rhs.r, 255.0f), min(g / rhs.g, 255.0f), min(b / rhs.b, 255.0f));
+	}
+
+	Color operator*(float rhs) const
+	{
+		return Color(min(r * rhs, 255.0f), min(g * rhs, 255.0f), min(b * rhs, 255.0f));
+	}
+
+	Color operator/(float rhs) const
+	{
+		return Color(min(r / rhs, 255.0f), min(g / rhs, 255.0f), min(b / rhs, 255.0f));
+	}
+
 	Color operator-(const Color &rhs) const
 	{
 		return Color(max(r - rhs.r, 0.0f), max(g - rhs.g, 0.0f), max(b - rhs.b, 0.0f));
@@ -46,11 +61,6 @@ struct Color
 		r = min(r * rhs, 255.0f);
 		g = min(g * rhs, 255.0f);
 		b = min(b * rhs, 255.0f);
-	}
-
-	Color operator*(float factor) const
-	{
-		return Color(min(r * factor, 255.0f), min(g  * factor, 255.0f), min(b  * factor, 255.0f));
 	}
 
 	float r;

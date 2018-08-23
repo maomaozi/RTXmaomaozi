@@ -154,6 +154,11 @@ struct Vec3 : public Struct3
 		return Vec3(x * rhs, y * rhs, z * rhs);
 	}
 
+	Vec3 operator/(float rhs) const
+	{
+		return Vec3(x / rhs, y / rhs, z / rhs);
+	}
+
 
 	float operator*(const Vec3 &rhs) const
 	{

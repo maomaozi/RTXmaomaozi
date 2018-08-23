@@ -174,7 +174,7 @@ public:
 		lights.emplace_back(light);
 	}
 
-	void trace(Camera camera, size_t traceDepth, Color bgColor, Color ambientLight, UINT32 *bitmap)
+	void trace(Camera camera, size_t traceDepth, Color bgColor, Color ambientLight, int antiAliasScale, UINT32 *bitmap)
 	{
 		backgroundColor = bgColor;
 		globalLight = ambientLight;
@@ -183,12 +183,32 @@ public:
 #pragma omp parallel
 		{
 #pragma omp for nowait schedule(static, 1)
-			for (int y = 1; y <= (int)camera.getHeight(); ++y)
+			for (int y = 0; y < (int)camera.getHeight(); ++y)
 			{
 				for (int x = 0; x < (int)camera.getWidth(); ++x)
 				{
-					bitmap[x + ((int)camera.getHeight() - y) * (int)camera.getWidth()] = 
-						castTraceRay(camera.getViewPoint(), camera.getViewRay(x, y), nullptr, false, traceDepth).getColor();
+
+					Vec3 nowViewRay = camera.getViewRay(x, y);
+					Vec3 nextViewRayX = camera.getViewRay(x + 1, y);
+					Vec3 nextViewRayY = camera.getViewRay(x, y + 1);
+
+
+					Vec3 diffX = (nextViewRayX - nowViewRay) / (float)antiAliasScale;
+					Vec3 diffY = (nextViewRayY - nowViewRay) / (float)antiAliasScale;
+
+					Color buffer(0, 0, 0);
+
+					// calculate sub pixel
+					for (int subY = 0; subY < antiAliasScale; ++subY) 
+					{
+						for (int subX = 0; subX < antiAliasScale; ++subX) 
+						{
+							buffer += castTraceRay(camera.getViewPoint(), nowViewRay + diffY * subY + diffX * subX, nullptr, false, traceDepth) / (antiAliasScale * antiAliasScale);
+						}
+					}
+					
+
+					bitmap[x + y * (int)camera.getWidth()] = buffer.getColor();
 				}
 			}
 		}
