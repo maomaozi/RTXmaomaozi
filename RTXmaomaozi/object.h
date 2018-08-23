@@ -72,7 +72,7 @@ public:
 	}
 
 
-protected:	
+protected:
 	Color reflectionRatio;
 	Color refractionRatio;
 	float refractionEta;
@@ -209,7 +209,7 @@ public:
 
 		if (fabs(dot1) < 0.001) return NO_INTERSECTION;
 
-		float t = normVec * (pointOnPlane - (emitPoint + rayVec * EPSILON)) / (normVec * rayVec);
+		float t = normVec * (pointOnPlane - (emitPoint + rayVec * EPSILON * 5)) / (normVec * rayVec);
 
 		if (t < 0) return NO_INTERSECTION;
 

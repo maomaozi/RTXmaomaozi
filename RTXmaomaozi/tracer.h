@@ -50,7 +50,7 @@ private:
 			Vec3 lightDirection = ((*lightIter)->position - nowPoint).normalize();
 
 			float angleDiffuseCos = normVector * lightDirection;
-			float angleReflectCos = pow(reflectorVec * lightDirection, 10);
+			float angleReflectCos = pow(reflectorVec * lightDirection, 9);
 
 			if (angleReflectCos < 0.0f) angleReflectCos = 0.0f;
 
@@ -112,7 +112,14 @@ private:
 		if (!getFirstIntersection(emitPoint, rayVec, isInMedium, castObj, firstIntersection))
 		{
 			// No intersection, return background color
-			return backgroundColor;
+			if (nowDepth == _traceDepth)
+			{
+				return backgroundColor;
+			}
+			else 
+			{
+				return Color(0, 0, 0);
+			}
 		}
 
 		Color reflectColor(0, 0, 0);		// Actual reflect light color
@@ -179,6 +186,8 @@ public:
 		backgroundColor = bgColor;
 		globalLight = ambientLight;
 
+		_traceDepth = traceDepth;
+
 		// calculate color of each pixel
 #pragma omp parallel
 		{
@@ -207,7 +216,6 @@ public:
 						}
 					}
 					
-
 					bitmap[x + y * (int)camera.getWidth()] = buffer.getColor();
 				}
 			}
@@ -217,6 +225,8 @@ public:
 private:
 	Color globalLight;
 	Color backgroundColor;
+
+	int _traceDepth;
 
 	std::vector<std::shared_ptr<Object>> objects;						// store all objects
 	std::vector<std::shared_ptr<Light>> lights;							// use dot light here
