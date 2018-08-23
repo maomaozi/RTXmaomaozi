@@ -41,15 +41,24 @@ private:
 	}
 
 
-	void getDirectLight(const Point3 &nowPoint, const Vec3 &normVector, Color &accumulateLightColor)
+	void getDirectLight(const Point3 &nowPoint, const Vec3 &reflectorVec, const Vec3 &normVector, float diffuseFactor, Color &accumulateLightColor)
 	{
 		for (auto lightIter = lights.begin(); lightIter != lights.end(); ++lightIter)
 		{
-			// Only process direct reflactor(illuminate by light source or background light)
+			// Only process direct reflactor(illuminate by light source)
 
-			float angleCos = normVector * ((*lightIter)->position - nowPoint).normalize();
+			Vec3 lightDirection = ((*lightIter)->position - nowPoint).normalize();
 
-			accumulateLightColor += castShadowRay(**lightIter, nowPoint) * angleCos;
+			float angleDiffuseCos = normVector * lightDirection;
+			float angleReflectCos = pow(reflectorVec * lightDirection, 10);
+
+			if (angleReflectCos < 0.0f) angleReflectCos = 0.0f;
+
+			Color lightColor = castShadowRay(**lightIter, nowPoint);
+
+			accumulateLightColor += 
+				lightColor * angleDiffuseCos * diffuseFactor +				// come from diffuse
+				lightColor * angleReflectCos * (1 - diffuseFactor);			// come from real reflector
 		}
 
 		accumulateLightColor += globalLight;
@@ -106,33 +115,33 @@ private:
 			return backgroundColor;
 		}
 
-		// Step 3:	cast shadow ray to light source
-		//			if shadow ray has intersection with object
-		//			(some thing between point and light source), then cast shadow
-		//			otherwise collect each light strength and contribute to color
-
 		Color reflectColor(0, 0, 0);		// Actual reflect light color
 		Color castOnColor(0, 0, 0);			// Direct and indirect light shade on this object
 
-		// Cast shadow to every light source
-		if (!isInMedium)
-		{
-			Vec3 norm(0, 0, 0);
-			firstIntersection.obj->getNormVecAt(firstIntersection.entryPoint, norm);
-			getDirectLight(firstIntersection.entryPoint, norm, castOnColor);
-		}
-
-		// Step 4:	Process reflection, calculate reflection ray and recursion trace
+		// Step 3:	Process reflection, calculate reflection ray and recursion trace
 		Vec3 reflectionRay(0, 0, 0);
 		firstIntersection.obj->calcReflectionRay(firstIntersection.entryPoint, rayVec, reflectionRay);
 
 		castOnColor += castTraceRay(firstIntersection.entryPoint, reflectionRay, firstIntersection.obj, isInMedium, nowDepth - 1);
 
-		// Step 5:	Process refraction, calculate refraction ray and recursion trace
+
+		// Step 4:	Process refraction, calculate refraction ray and recursion trace
 		//			If total reflection happend, no need to calculate refraction
 		Vec3 refractionRay(0, 0, 0);
 		bool totalReflection = firstIntersection.obj->calcRefractionRay(firstIntersection.entryPoint, rayVec, refractionRay, isInMedium);
 
+
+		// Step 6:	cast shadow ray to light source
+		//			if shadow ray has intersection with object
+		//			(some thing between point and light source), then cast shadow
+		//			otherwise collect each light strength and contribute to color
+		// Cast shadow to every light source
+		if (!isInMedium)
+		{
+			Vec3 norm(0, 0, 0);
+			firstIntersection.obj->getNormVecAt(firstIntersection.entryPoint, norm);
+			getDirectLight(firstIntersection.entryPoint, reflectionRay, norm, firstIntersection.obj->getDiffuseFactor(), castOnColor);
+		}
 
 		// Step 6: Process reflect color
 		if (totalReflection)
@@ -165,9 +174,10 @@ public:
 		lights.emplace_back(light);
 	}
 
-	void trace(Camera camera, size_t traceDepth, Color bgColor, UINT32 *bitmap)
+	void trace(Camera camera, size_t traceDepth, Color bgColor, Color ambientLight, UINT32 *bitmap)
 	{
-		backgroundColor = globalLight = bgColor;
+		backgroundColor = bgColor;
+		globalLight = ambientLight;
 
 		// calculate color of each pixel
 #pragma omp parallel

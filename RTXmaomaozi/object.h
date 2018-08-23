@@ -35,7 +35,7 @@ class Object
 
 public:
 
-	Object(const Color &reflectionRatio, float refractionRatio, float refractionEta, float diffuseFactor) :
+	Object(const Color &reflectionRatio, const Color & refractionRatio, float refractionEta, float diffuseFactor) :
 		reflectionRatio(reflectionRatio),
 		refractionRatio(refractionRatio),
 		refractionEta(refractionEta),
@@ -56,7 +56,7 @@ public:
 		return reflectionRatio;
 	}
 
-	float getRefractionRatio() const
+	Color getRefractionRatio() const
 	{
 		return refractionRatio;
 	}
@@ -66,10 +66,15 @@ public:
 		return refractionEta;
 	}
 
+	float getDiffuseFactor() const
+	{
+		return diffuseFactor;
+	}
+
 
 protected:	
 	Color reflectionRatio;
-	float refractionRatio;
+	Color refractionRatio;
 	float refractionEta;
 	float refractionEtaEntry;
 	float diffuseFactor;
@@ -81,7 +86,7 @@ class Sphere : public Object
 {
 public:
 
-	Sphere(const Point3 &center, float radius, const Color &reflectionRatio, float refractionRatio, float refractionEta, float diffuseFactor) :
+	Sphere(const Point3 &center, float radius, const Color &reflectionRatio, const Color &refractionRatio, float refractionEta, float diffuseFactor) :
 		Object(reflectionRatio, refractionRatio, refractionEta, diffuseFactor),
 		center(center),
 		radius(radius)
@@ -164,7 +169,7 @@ class Plane : public Object
 public:
 
 	Plane(const Vec3 &normVec, const Point3 &pointOnPlane, const Color &reflectionRatio, float diffuseFactor) :
-		Object(reflectionRatio, 0, 1.0f, diffuseFactor),
+		Object(reflectionRatio, Color(0.0f, 0.0f, 0.0f), 1.0f, diffuseFactor),
 		normVec(normVec.normalize()),
 		pointOnPlane(pointOnPlane)
 	{
