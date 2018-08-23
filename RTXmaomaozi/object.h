@@ -51,12 +51,12 @@ public:
 
 	virtual void getNormVecAt(const Point3 &point, Vec3 &norm) const = 0;
 
-	const Color &getReflectionRatio() const
+	virtual const Color &getReflectionRatio(const Point3 &point) const
 	{
 		return reflectionRatio;
 	}
 
-	Color getRefractionRatio() const
+	virtual Color getRefractionRatio(const Point3 &point) const
 	{
 		return refractionRatio;
 	}
@@ -171,9 +171,29 @@ public:
 	Plane(const Vec3 &normVec, const Point3 &pointOnPlane, const Color &reflectionRatio, float diffuseFactor) :
 		Object(reflectionRatio, Color(0.0f, 0.0f, 0.0f), 1.0f, diffuseFactor),
 		normVec(normVec.normalize()),
-		pointOnPlane(pointOnPlane)
+		pointOnPlane(pointOnPlane),
+		base1(0, 0, 0), base2(0, 0, 0)
 	{
-		;
+
+		int idx;
+
+		for (idx = 0; idx < 3; ++idx)
+		{
+			if (normVec[idx]) break;
+		}
+
+		for (int i = 0; i  < 3; ++i)
+		{
+			if (i != idx) base1[i] = 1.0f;
+		}
+
+
+		base1[idx] = -(normVec * base1) / normVec[idx];
+
+		base2 = normVec.xmul(base1);
+
+		base1 = base1.normalize();
+		base2 = base2.normalize();
 	}
 
 
@@ -181,6 +201,7 @@ public:
 	{
 		norm = normVec;
 	}
+
 
 	float getIntersection(const Point3 &emitPoint, const Vec3 &rayVec, bool isInMedium) const
 	{
@@ -194,6 +215,21 @@ public:
 
 		return t;
 		
+	}
+
+	virtual const Color &getReflectionRatio(const Point3 &point) const
+	{
+		Vec3 partialCoords = point - pointOnPlane;
+
+		int axis1 = roundf(fabsf(partialCoords *  base1) / 500);
+		int axis2 = roundf(fabsf(partialCoords *  base2) / 500);
+
+		
+		if ((axis1 + axis2) % 2 == 0)
+			return blackColor;
+		else
+			return whiteColor;
+	
 	}
 
 
@@ -212,4 +248,11 @@ public:
 private:
 	Vec3 normVec;
 	Point3 pointOnPlane;
+
+	Vec3 base1;
+	Vec3 base2;
+
+private:
+	Color blackColor = Color(0, 0, 0);
+	Color whiteColor = Color(0.9, 0.9, 0.9);
 };

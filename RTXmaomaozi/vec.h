@@ -41,6 +41,22 @@ struct Struct3
 		return *this;
 	}
 
+	float operator[](int i) const
+	{
+		if (i == 0) return x;
+		if (i == 1) return y;
+		if (i == 2) return z;
+
+		return 0;
+	}
+
+	float &operator[](int i)
+	{
+		if (i == 0) return x;
+		if (i == 1) return y;
+
+		return z;
+	}
 
 	bool operator==(const Struct3 &rhs) const
 	{

@@ -151,10 +151,10 @@ private:
 		}
 		else
 		{
-			reflectColor += castOnColor * firstIntersection.obj->getReflectionRatio();
+			reflectColor += castOnColor * firstIntersection.obj->getReflectionRatio(firstIntersection.entryPoint);
 
 			// then add refraction
-			reflectColor += castTraceRay(firstIntersection.entryPoint, refractionRay, firstIntersection.obj, !isInMedium, nowDepth - 1) * firstIntersection.obj->getRefractionRatio();
+			reflectColor += castTraceRay(firstIntersection.entryPoint, refractionRay, firstIntersection.obj, !isInMedium, nowDepth - 1) * firstIntersection.obj->getRefractionRatio(firstIntersection.entryPoint);
 		}
 
 		
