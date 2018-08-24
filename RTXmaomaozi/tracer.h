@@ -50,7 +50,7 @@ private:
 			Vec3 lightDirection = ((*lightIter)->position - nowPoint).normalize();
 
 			float angleDiffuseCos = normVector * lightDirection;
-			float angleReflectCos = pow(reflectorVec * lightDirection, 9);
+			float angleReflectCos = powf(reflectorVec * lightDirection, 9);
 
 			if (angleReflectCos < 0.0f) angleReflectCos = 0.0f;
 
@@ -129,7 +129,7 @@ private:
 		Vec3 reflectionRay(0, 0, 0);
 		firstIntersection.obj->calcReflectionRay(firstIntersection.entryPoint, rayVec, reflectionRay);
 
-		castOnColor += castTraceRay(firstIntersection.entryPoint, reflectionRay, firstIntersection.obj, isInMedium, nowDepth - 1);
+		castOnColor += castTraceRay(firstIntersection.entryPoint, reflectionRay, firstIntersection.obj, isInMedium, nowDepth - 1) * (1 - firstIntersection.obj->getDiffuseFactor());
 
 
 		// Step 4:	Process refraction, calculate refraction ray and recursion trace
@@ -138,7 +138,7 @@ private:
 		bool totalReflection = firstIntersection.obj->calcRefractionRay(firstIntersection.entryPoint, rayVec, refractionRay, isInMedium);
 
 
-		// Step 6:	cast shadow ray to light source
+		// Step 5:	cast shadow ray to light source
 		//			if shadow ray has intersection with object
 		//			(some thing between point and light source), then cast shadow
 		//			otherwise collect each light strength and contribute to color

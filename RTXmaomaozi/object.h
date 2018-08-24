@@ -217,19 +217,9 @@ public:
 		
 	}
 
-	virtual const Color &getReflectionRatio(const Point3 &point) const
+	const Color &getReflectionRatio(const Point3 &point) const
 	{
-		Vec3 partialCoords = point - pointOnPlane;
-
-		int axis1 = roundf(fabsf(partialCoords *  base1) / 500);
-		int axis2 = roundf(fabsf(partialCoords *  base2) / 500);
-
-		
-		if ((axis1 + axis2) % 2 == 0)
-			return blackColor;
-		else
-			return whiteColor;
-	
+		return reflectionRatio;
 	}
 
 
@@ -245,12 +235,36 @@ public:
 		return false;
 	}
 
-private:
+protected:
 	Vec3 normVec;
 	Point3 pointOnPlane;
 
 	Vec3 base1;
 	Vec3 base2;
+
+};
+
+
+class CheesePlane : public Plane
+{
+public:
+
+	using Plane::Plane;
+
+	virtual const Color &getReflectionRatio(const Point3 &point) const
+	{
+		Vec3 partialCoords = point - pointOnPlane;
+
+		int axis1 = roundf(fabsf(partialCoords *  base1) / 500);
+		int axis2 = roundf(fabsf(partialCoords *  base2) / 500);
+
+
+		if ((axis1 + axis2) % 2 == 0)
+			return blackColor;
+		else
+			return whiteColor;
+
+	}
 
 private:
 	Color blackColor = Color(0, 0, 0);
