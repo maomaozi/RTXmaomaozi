@@ -24,7 +24,7 @@
 
 ### Bug already know
 - [x] ~~摄像机转向不正常~~
-- [ ] Plane在降低漫反射系数后出现噪点
+- [x] ~~Plane在降低漫反射系数后出现噪点~~
 - [ ] Plane不正常的过曝导致反射丢失
 
 ### Always
@@ -34,4 +34,4 @@
 
 ### Demo Scene:
 
-![Demo](http://121.49.97.197:10101/maozi/RTXmaomaozi/raw/99418bcac205cdf221a2fafc98680105a03cdc00/demo.png "Demo")
+![Demo](http://121.49.97.197:10101/maozi/RTXmaomaozi/raw/d793d4d693b146c4eee38abe286f1966cc423161/demo.png "Demo")
