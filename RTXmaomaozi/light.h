@@ -16,51 +16,62 @@ struct Color
 
 	Color operator+(const Color &rhs) const
 	{
-		return Color(min(r + rhs.r, 255.0f), min(g + rhs.g, 255.0f), min(b + rhs.b, 255.0f));
-	}
-
-	Color operator*(const Color &rhs) const
-	{
-		return Color(min(r * rhs.r, 255.0f), min(g * rhs.g, 255.0f), min(b * rhs.b, 255.0f));
-	}
-
-	Color operator/(const Color &rhs) const
-	{
-		return Color(min(r / rhs.r, 255.0f), min(g / rhs.g, 255.0f), min(b / rhs.b, 255.0f));
-	}
-
-	Color operator*(float rhs) const
-	{
-		return Color(min(r * rhs, 255.0f), min(g * rhs, 255.0f), min(b * rhs, 255.0f));
-	}
-
-	Color operator/(float rhs) const
-	{
-		return Color(min(r / rhs, 255.0f), min(g / rhs, 255.0f), min(b / rhs, 255.0f));
+		return Color(r + rhs.r, g + rhs.g, b + rhs.b);
 	}
 
 	Color operator-(const Color &rhs) const
 	{
-		return Color(max(r - rhs.r, 0.0f), max(g - rhs.g, 0.0f), max(b - rhs.b, 0.0f));
+		return Color(r - rhs.r, g - rhs.g, b - rhs.b);
+	}
+
+	Color operator*(const Color &rhs) const
+	{
+		return Color(r * rhs.r, g * rhs.g, b * rhs.b);
+	}
+
+	Color operator/(const Color &rhs) const
+	{
+		return Color(r / rhs.r, g / rhs.g, b / rhs.b);
+	}
+
+
+	Color operator+(float rhs) const
+	{
+		return Color(r + rhs, g + rhs, b + rhs);
+	}
+
+	Color operator-(float rhs) const
+	{
+		return Color(r - rhs, g - rhs, b - rhs);
+	}
+
+	Color operator*(float rhs) const
+	{
+		return Color (r * rhs, g * rhs, b * rhs);
+	}
+
+	Color operator/(float rhs) const
+	{
+		return Color((r / rhs), (g / rhs), (b / rhs));
 	}
 
 	UINT32 getColor() const
 	{
-		return ((UINT32)r << 16) | ((UINT32)g << 8) | (UINT32)b;
+		return ((UINT32)max(min(r, 255.0f), 0.0f) << 16) | ((UINT32)max(min(g, 255.0f), 0.0f) << 8) | (UINT32)max(min(b, 255.0f), 0.0f);
 	}
 
 	void operator+=(const Color &rhs)
 	{
-		r = min(r + rhs.r, 255.0f);
-		g = min(g + rhs.g, 255.0f);
-		b = min(b + rhs.b, 255.0f);
+		r = r + rhs.r;
+		g = g + rhs.g;
+		b = b + rhs.b;
 	}
 
 	void operator*=(float rhs)
 	{
-		r = min(r * rhs, 255.0f);
-		g = min(g * rhs, 255.0f);
-		b = min(b * rhs, 255.0f);
+		r = r * rhs;
+		g = g * rhs;
+		b = b * rhs;
 	}
 
 	float r;

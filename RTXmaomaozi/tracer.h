@@ -52,7 +52,7 @@ private:
 			float angleDiffuseCos = normVector * lightDirection;
 			float angleReflectCos = powf(reflectorVec * lightDirection, 9);
 
-			if (angleReflectCos < 0.0f) angleReflectCos = 0.0f;
+			if (angleReflectCos < (1.0f - diffuseFactor)) angleReflectCos = 0.0f;
 
 			Color lightColor = castShadowRay(**lightIter, nowPoint);
 
@@ -212,11 +212,11 @@ public:
 					{
 						for (int subX = 0; subX < antiAliasScale; ++subX) 
 						{
-							buffer += castTraceRay(camera.getViewPoint(), nowViewRay + diffY * subY + diffX * subX, nullptr, false, traceDepth) / (antiAliasScale * antiAliasScale);
+							buffer += castTraceRay(camera.getViewPoint(), nowViewRay + diffY * subY + diffX * subX, nullptr, false, traceDepth);
 						}
 					}
 					
-					bitmap[x + y * (int)camera.getWidth()] = buffer.getColor();
+					bitmap[x + y * (int)camera.getWidth()] = (buffer / (antiAliasScale * antiAliasScale)).getColor();
 				}
 			}
 		}
