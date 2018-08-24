@@ -37,4 +37,4 @@
 
 ### Demo Scene:
 
-![Demo](http://121.49.97.197:10101/maozi/RTXmaomaozi/raw/d793d4d693b146c4eee38abe286f1966cc423161/demo.png "Demo")
+![Demo](http://121.49.97.197:10101/maozi/RTXmaomaozi/raw/12cbc0469f770de8aa3741802555e9cba4771876/demo.png "Demo")
