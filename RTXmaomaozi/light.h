@@ -120,7 +120,7 @@ public:
 	}
 
 public:
-	virtual Color getLightStrength(const Point3 &objPosition, const Vec3 &objNorm) const = 0;
+	virtual Color getLightStrength(const Vec3 &lightDirection, float distance, const Vec3 &objNorm) const = 0;
 
 	Point3 position;
 	float strength;
@@ -134,10 +134,42 @@ public:
 	using Light::Light;
 
 public:
-	Color getLightStrength(const Point3 &objPosition, const Vec3 &objNorm) const
+	Color getLightStrength(const Vec3 &lightDirection, float distance, const Vec3 &objNorm) const
 	{
 		return color * strength;
 	}
+
+};
+
+
+class SpotLight : public Light
+{
+public:
+	SpotLight(Point3 position, Color color, float strength, const Vec3 &direct, float decayRatio) :
+		Light(position, color, strength),
+		direct(direct),
+		decayRatio(decayRatio)
+	{
+		this->direct.normalize();
+	}
+
+public:
+	Color getLightStrength(const Vec3 &lightDirection, float distance, const Vec3 &objNorm) const
+	{
+		float offsetCosAngle = -lightDirection * direct;
+
+		float decay = powf(offsetCosAngle, powf(29, decayRatio));
+		decay = powf(decay, powf(29, decayRatio));
+
+		if (decay < 0) decay = 0;
+
+		return color * strength * decay;
+	}
+
+private:
+	Vec3 direct;
+	float decayRatio;
+
 };
 
 

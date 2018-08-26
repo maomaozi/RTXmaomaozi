@@ -56,7 +56,7 @@ private:
 
 				if (angleReflectCos < (1.0f - diffuseFactor)) angleReflectCos = 0.0f;
 
-				Color lightColor = (*lightIter)->getLightStrength(nowPoint, normVector);
+				Color lightColor = (*lightIter)->getLightStrength(lightDirection, lightLength, normVector);
 
 				// come from diffuse
 				accumulateLightColor += lightColor * angleDiffuseCos * diffuseFactor;
