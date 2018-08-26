@@ -55,6 +55,20 @@ struct Color
 		return Color((r / rhs), (g / rhs), (b / rhs));
 	}
 
+	void operator/=(float rhs)
+	{
+		r /= rhs;
+		g /= rhs;
+		b /= rhs;
+	}
+
+	void operator/=(const Color &rhs)
+	{
+		r /= rhs.r;
+		g /= rhs.g;
+		b /= rhs.b;
+	}
+
 	UINT32 getColor() const
 	{
 		return ((UINT32)max(min(r, 255.0f), 0.0f) << 16) | ((UINT32)max(min(g, 255.0f), 0.0f) << 8) | (UINT32)max(min(b, 255.0f), 0.0f);
@@ -72,6 +86,13 @@ struct Color
 		r = r * rhs;
 		g = g * rhs;
 		b = b * rhs;
+	}
+
+	void operator*=(const Color &rhs)
+	{
+		r *= rhs.r;
+		g *= rhs.g;
+		b *= rhs.b;
 	}
 
 	float r;

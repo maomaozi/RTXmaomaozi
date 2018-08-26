@@ -121,18 +121,19 @@ namespace vecUnitTest
 
 		TEST_METHOD(TestVec3Normalize)
 		{
-			Vec3 v1(1, 2, 3);
-			v1.normalize();
+			Vec3 v1(1, 0, 0);
+			Vec3 v2(1, 2, 2);
 
-			Assert::AreEqual(Vec3(1, 2, 3), v1);
-			Assert::IsTrue((Vec3(1, 0, 0).normalize() - Vec3(1 ,0, 0)).length() < 0.0001f);
-			Assert::IsTrue((Vec3(1, 2, 2).normalize() - Vec3(1 / 3.0f, 2 / 3.0f, 2 / 3.0f)).length() < 0.0001f);
+			v1.normalize();
+			v2.normalize();
+
+			Assert::IsTrue((v1.length() - 1.0f) < 0.001f);
+			Assert::IsTrue((v2 - Vec3(1 / 3.0f, 2 / 3.0f, 2 / 3.0f)).length() < 0.001f);
 		}
 
 
 		TEST_METHOD(TestVec3Angel)
 		{
-			Assert::AreEqual(0.0f, Vec3(0, 0, 0).angle(Vec3(0, 0, 0)));
 			Assert::AreEqual(0.0f, Vec3(1, 1, 0).angle(Vec3(1, 1, 0)));
 			Assert::AreEqual(PI / 2, Vec3(1, 0, 0).angle(Vec3(0, 1, 0)));
 			Assert::AreEqual(PI / 2, Vec3(1, 0, 0).angle(Vec3(0, 0, 1)));

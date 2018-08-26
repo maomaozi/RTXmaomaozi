@@ -5,14 +5,27 @@ class Camera
 {
 public:
 	Camera(const Point3 &cameraPosition, const Vec3 &verticalVec, const Vec3 &horizonVec, float width, float height, float screenDist) :
-		_verticalVec(verticalVec.normalize()), _horizonVec(horizonVec.normalize()),
+		_verticalVec(verticalVec), _horizonVec(horizonVec),
 		width(width), height(height),
 		screenDist(screenDist),
 		cameraPosition(cameraPosition),
 		screenCenter(cameraPosition + _verticalVec * (height / 2) + _horizonVec * (width / 2)),
-		viewPoint(screenCenter + _verticalVec.xmul(_horizonVec).normalize() * screenDist)
+		viewPoint(0,0,0)
 	{
-		;
+		_verticalVec.normalize();
+		_horizonVec.normalize();
+
+		Vec3 norm = _verticalVec.xmul(_horizonVec);
+		norm.normalize();
+
+		viewPoint = screenCenter + norm * screenDist;
+	}
+
+	Vec3 getViewPlaneNorm()
+	{
+		Vec3 norm = _verticalVec.xmul(_horizonVec);
+		norm.normalize();
+		return norm;
 	}
 
 	// (right-clockwise) for positive angel
@@ -22,7 +35,10 @@ public:
 
 		screenCenter = cameraPosition + _verticalVec * (height / 2) + _horizonVec * (width / 2);
 
-		viewPoint = screenCenter + _verticalVec.xmul(_horizonVec).normalize() * screenDist;
+		Vec3 norm = _verticalVec.xmul(_horizonVec);
+		norm.normalize();
+
+		viewPoint = screenCenter + norm * screenDist;
 	}
 
 	// top-clockwise for positive angel
@@ -33,7 +49,10 @@ public:
 
 		screenCenter = cameraPosition + _verticalVec * (height / 2) + _horizonVec * (width / 2);
 
-		viewPoint = screenCenter + _verticalVec.xmul(_horizonVec).normalize() * screenDist;
+		Vec3 norm = _verticalVec.xmul(_horizonVec);
+		norm.normalize();
+
+		viewPoint = screenCenter + norm * screenDist;
 	}
 
 
@@ -61,17 +80,26 @@ public:
 	{
 		cameraPosition = newPosition;
 		screenCenter = cameraPosition + _verticalVec * (height / 2) + _horizonVec * (width / 2);
-		viewPoint = screenCenter + _verticalVec.xmul(_horizonVec).normalize() * screenDist;
+
+		Vec3 norm = _verticalVec.xmul(_horizonVec);
+		norm.normalize();
+
+		viewPoint = screenCenter + norm * screenDist;
 	}
 
 	Point3 rasterization(float x, float y)
 	{
+		auto a = cameraPosition + _horizonVec;
 		return cameraPosition + _verticalVec * y  + _horizonVec * x;
 	}
 
 	Vec3 getViewRay(float x, float y)
 	{
-		return (rasterization(x, y) - viewPoint).normalize();
+		Vec3 viewRay = rasterization(x, y) - viewPoint;
+
+		viewRay.normalize();
+
+		return viewRay;
 	}
 
 	Point3 getViewPoint()

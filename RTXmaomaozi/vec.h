@@ -5,6 +5,8 @@
 #define PI 3.14159265358979f
 
 
+//#define USE_SSE_AVX
+
 /*
 		    ¡ü y    %
 			|     / z
@@ -16,11 +18,19 @@
 	   Angle is define as conter-clockwise ( While one axis point to right and one point to sky)
 */
 
-
-
 struct Struct3 
 {
+#ifdef USE_SSE_AVX
+	Struct3(float x, float y, float z)
+	{
+		f[0] = x;
+		f[1] = y;
+		f[2] = z;
+		f[3] = 0.0f;
+	}
+#else
 	Struct3(float x, float y, float z) : x(x), y(y), z(z) {}
+#endif
 
 	Struct3 &operator+=(const Struct3 &rhs)
 	{
@@ -63,10 +73,40 @@ struct Struct3
 		return x == rhs.x && y == rhs.y && z == rhs.z;
 	}
 
+#ifdef USE_SSE_AVX
+	Struct3 &operator=(const Struct3 &rhs)
+	{
+		if (&rhs != this)
+		{
+			f[0] = rhs.f[0];
+			f[1] = rhs.f[1];
+			f[2] = rhs.f[2];
+		}
 
-	float x;
-	float y;
-	float z;
+		return *this;
+	}
+
+	Struct3(const Struct3 &rhs)
+	{
+		f[0] = rhs.f[0];
+		f[1] = rhs.f[1];
+		f[2] = rhs.f[2];
+		f[3] = 0.0f;
+	}
+#endif
+
+#ifdef USE_SSE_AVX
+	
+	__declspec(align(16)) float f[4];
+
+	float &x = f[0];
+	float &y = f[1];
+	float &z = f[2];
+
+	mutable float tmp_float4[4];
+#else
+	float x, y, z;
+#endif
 };
 
 
@@ -83,7 +123,20 @@ struct Vec3 : public Struct3
 
 	float dot(const Vec3 &rhs) const
 	{
+#ifdef USE_SSE_AVX
+
+		__m128 op1 = _mm_load_ps(f);
+		__m128 op2 = _mm_load_ps(rhs.f);
+
+		__m128 r1 = _mm_mul_ps(op1, op2);
+		__m128 r2 = _mm_hadd_ps(r1, r1);
+		__m128 r3 = _mm_hadd_ps(r2, r2);
+
+		return r3.m128_f32[0];
+
+#else
 		return x * rhs.x + y * rhs.y + z * rhs.z;
+#endif
 	}
 
 
@@ -93,11 +146,11 @@ struct Vec3 : public Struct3
 	}
 
 
-	Vec3 normalize() const
+	void normalize()
 	{
 		float len = length();
 
-		if(len == 0)
+		/*if(len == 0)
 		{
 			return Vec3(1, 0, 0);
 		}
@@ -105,20 +158,38 @@ struct Vec3 : public Struct3
 		len += EPSILON;
 
 		return Vec3(x / len, y / len, z / len);
+		*/
+
+		if (len != 0)
+		{
+			len += EPSILON;
+
+			x /= len;
+			y /= len;
+			z /= len;
+		}
 	}
 
 
 	float length() const
 	{
+#ifdef USE_SSE_AVX
 		return sqrtf(powf(x, 2) + powf(y, 2) + powf(z, 2));
+#else
+		return sqrtf(powf(x, 2) + powf(y, 2) + powf(z, 2));
+#endif
+		
 	}
 
 
 	float angle(const Vec3 &rhs) const
 	{
 
-		Vec3 vec1 = this->normalize();
-		Vec3 vec2 = rhs.normalize();
+		Vec3 vec1 = *this;
+		vec1.normalize();
+
+		Vec3 vec2 = rhs;
+		vec2.normalize();
 
 		float tmp = vec1 * vec2;
 
@@ -153,6 +224,15 @@ struct Vec3 : public Struct3
 	{
 		return Vec3(x * rhs, y * rhs, z * rhs);
 	}
+
+
+	void operator*=(float rhs)
+	{
+		x *= rhs;
+		y *= rhs;
+		z *= rhs;
+	}
+
 
 	Vec3 operator/(float rhs) const
 	{

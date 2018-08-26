@@ -97,14 +97,14 @@ public:
 
 	void getNormVecAt(const Point3 &point, Vec3 &norm) const
 	{
-		norm = (point - center).normalize();
+		norm = point - center;
+		norm.normalize();
 	}
 
 	float getIntersection(const Point3 &emitPoint, const Vec3 &rayVec, bool isInMedium) const
 	{
 
 		Vec3 sphereDist = center - emitPoint;
-		//Vec3 rayDirect = rayVec.normalize();
 
 		float sphereDistProjectOnRay = rayVec * sphereDist;
 
@@ -123,8 +123,8 @@ public:
 
 	void calcReflectionRay(const Point3 &reflectionPoint, const Vec3 &rayVec, Vec3 &reflectionRay) const
 	{
-		Vec3 normVec = (reflectionPoint - center).normalize();
-		//Vec3 rayVecNorm = rayVec.normalize();
+		Vec3 normVec = reflectionPoint - center;
+		normVec.normalize();
 
 		// R = I - 2 * (I * N) * N
 		reflectionRay = rayVec - normVec * 2 * (rayVec * normVec);
@@ -147,8 +147,10 @@ public:
 		*/
 		float eta = isInMedium ? refractionEta : refractionEtaEntry;
 
-		Vec3 normVec = (refractionPoint - center).normalize() * (isInMedium ? -1 : 1);
-		//Vec3 rayVecNorm = rayVec.normalize();
+		Vec3 normVec = (refractionPoint - center);
+		normVec.normalize();
+		normVec *= (isInMedium ? -1.0f : 1.0f);
+
 
 		float cosi = -rayVec * normVec;
 		float cost2 = 1.0f - eta * eta * (1.0f - cosi * cosi);
@@ -170,10 +172,11 @@ public:
 
 	Plane(const Vec3 &normVec, const Point3 &pointOnPlane, const Color &reflectionRatio, float diffuseFactor) :
 		Object(reflectionRatio, Color(0.0f, 0.0f, 0.0f), 1.0f, diffuseFactor),
-		normVec(normVec.normalize()),
+		normVec(normVec),
 		pointOnPlane(pointOnPlane),
 		base1(0, 0, 0), base2(0, 0, 0)
 	{
+		this->normVec.normalize();
 
 		int idx;
 
@@ -192,8 +195,8 @@ public:
 
 		base2 = normVec.xmul(base1);
 
-		base1 = base1.normalize();
-		base2 = base2.normalize();
+		base1.normalize();
+		base2.normalize();
 	}
 
 
@@ -208,8 +211,7 @@ public:
 		float dot1 = normVec * rayVec;
 
 		if (fabs(dot1) < 0.001) return NO_INTERSECTION;
-
-		float t = normVec * (pointOnPlane - (emitPoint + rayVec * EPSILON * 5)) / (normVec * rayVec);
+		float t = normVec * (pointOnPlane - (emitPoint + rayVec * EPSILON * 5)) / dot1;
 
 		if (t < 0) return NO_INTERSECTION;
 
@@ -255,8 +257,8 @@ public:
 	{
 		Vec3 partialCoords = point - pointOnPlane;
 
-		int axis1 = roundf(fabsf(partialCoords *  base1) / 500);
-		int axis2 = roundf(fabsf(partialCoords *  base2) / 500);
+		int axis1 = roundf(fabsf(partialCoords *  base1) / 300);
+		int axis2 = roundf(fabsf(partialCoords *  base2) / 300);
 
 
 		if ((axis1 + axis2) % 2 == 0)
@@ -267,6 +269,6 @@ public:
 	}
 
 private:
-	Color blackColor = Color(0, 0, 0);
+	Color blackColor = Color(0.2, 0.2, 0.2);
 	Color whiteColor = Color(0.9, 0.9, 0.9);
 };
