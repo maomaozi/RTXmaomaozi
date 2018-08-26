@@ -16,10 +16,10 @@ public:
 
 private:
 
-	Color castShadowRay(const Light &lightSource, const Point3 &emitPoint)
+	bool isShadow(const Light &lightSource, const Point3 &emitPoint)
 	{
 		// Check if any object between lightSource and emitPoint
-		// If there is something, return 0
+		// If there is something, return true
 
 		float lightDistance = (lightSource.position - emitPoint).length();
 
@@ -34,13 +34,12 @@ private:
 			if (distance != NO_INTERSECTION && distance < lightDistance)
 			{
 				// block by some object front fo light source
-				// global light
-				return Color(0, 0, 0);
+				return true;
 			}
 		}
 
-		// Else return light information
-		return lightSource.color * lightSource.strength;
+		// can reach light source direct
+		return false;
 	}
 
 
@@ -50,19 +49,24 @@ private:
 		{
 			// Only process direct reflactor(illuminate by light source)
 
-			Vec3 lightDirection = (*lightIter)->position - nowPoint;
-			lightDirection.normalize();
+			if (!isShadow(**lightIter, nowPoint)) {
 
-			float angleDiffuseCos = normVector * lightDirection;
-			float angleReflectCos = powf(reflectorVec * lightDirection, 9);
+				Vec3 lightDirection = (*lightIter)->position - nowPoint;
+				lightDirection.normalize();
 
-			if (angleReflectCos < (1.0f - diffuseFactor)) angleReflectCos = 0.0f;
+				float angleDiffuseCos = normVector * lightDirection;
+				float angleReflectCos = powf(reflectorVec * lightDirection, 9);
 
-			Color lightColor = castShadowRay(**lightIter, nowPoint);
+				if (angleReflectCos < (1.0f - diffuseFactor)) angleReflectCos = 0.0f;
 
-			accumulateLightColor += 
-				lightColor * angleDiffuseCos * diffuseFactor +				// come from diffuse
-				lightColor * angleReflectCos * (1 - diffuseFactor);			// come from real reflector
+				Color lightColor = (*lightIter)->getLightStrength(nowPoint, normVector);
+
+				// come from diffuse
+				accumulateLightColor += lightColor * angleDiffuseCos * diffuseFactor;
+
+				// come from real reflector
+				accumulateLightColor += lightColor * angleReflectCos * (1 - diffuseFactor);
+			}
 		}
 
 		accumulateLightColor += globalLight;

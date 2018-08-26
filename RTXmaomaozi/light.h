@@ -40,20 +40,24 @@ struct Color
 		return Color(r + rhs, g + rhs, b + rhs);
 	}
 
+
 	Color operator-(float rhs) const
 	{
 		return Color(r - rhs, g - rhs, b - rhs);
 	}
+
 
 	Color operator*(float rhs) const
 	{
 		return Color (r * rhs, g * rhs, b * rhs);
 	}
 
+
 	Color operator/(float rhs) const
 	{
 		return Color((r / rhs), (g / rhs), (b / rhs));
 	}
+
 
 	void operator/=(float rhs)
 	{
@@ -62,6 +66,7 @@ struct Color
 		b /= rhs;
 	}
 
+
 	void operator/=(const Color &rhs)
 	{
 		r /= rhs.r;
@@ -69,10 +74,12 @@ struct Color
 		b /= rhs.b;
 	}
 
+
 	UINT32 getColor() const
 	{
 		return ((UINT32)max(min(r, 255.0f), 0.0f) << 16) | ((UINT32)max(min(g, 255.0f), 0.0f) << 8) | (UINT32)max(min(b, 255.0f), 0.0f);
 	}
+
 
 	void operator+=(const Color &rhs)
 	{
@@ -81,12 +88,14 @@ struct Color
 		b = b + rhs.b;
 	}
 
+
 	void operator*=(float rhs)
 	{
 		r = r * rhs;
 		g = g * rhs;
 		b = b * rhs;
 	}
+
 
 	void operator*=(const Color &rhs)
 	{
@@ -95,18 +104,23 @@ struct Color
 		b *= rhs.b;
 	}
 
+
 	float r;
 	float g;
 	float b;
 };
 
 
-struct Light 
+class Light 
 {
+public:
 	Light(Point3 position, Color color, float strength) : position(position), color(color), strength(strength)
 	{
 		;
 	}
+
+public:
+	virtual Color getLightStrength(const Point3 &objPosition, const Vec3 &objNorm) const = 0;
 
 	Point3 position;
 	float strength;
@@ -114,8 +128,20 @@ struct Light
 };
 
 
-struct Object;
+class DotLight : public Light
+{
+public:
+	using Light::Light;
 
+public:
+	Color getLightStrength(const Point3 &objPosition, const Vec3 &objNorm) const
+	{
+		return color * strength;
+	}
+};
+
+
+struct Object;
 
 struct Ray 
 {
