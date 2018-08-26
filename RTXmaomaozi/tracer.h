@@ -16,19 +16,14 @@ public:
 
 private:
 
-	bool isShadow(const Light &lightSource, const Point3 &emitPoint)
+	bool isShadow(const Vec3 &lightDirection, float lightDistance, const Point3 &emitPoint)
 	{
 		// Check if any object between lightSource and emitPoint
 		// If there is something, return true
 
-		float lightDistance = (lightSource.position - emitPoint).length();
-
 		for (auto objIter = objects.begin(); objIter != objects.end(); ++objIter)
 		{
 			// if any object block this light source 
-			Vec3 lightDirection = lightSource.position - emitPoint;
-			lightDirection.normalize();
-
 			float distance = (*objIter)->getIntersection(emitPoint, lightDirection, false);
 
 			if (distance != NO_INTERSECTION && distance < lightDistance)
@@ -49,10 +44,12 @@ private:
 		{
 			// Only process direct reflactor(illuminate by light source)
 
-			if (!isShadow(**lightIter, nowPoint)) {
+			Vec3 lightDirection = (*lightIter)->position - nowPoint;
+			float lightLength = lightDirection.length();
 
-				Vec3 lightDirection = (*lightIter)->position - nowPoint;
-				lightDirection.normalize();
+			lightDirection.normalize();
+
+			if (!isShadow(lightDirection, lightLength, nowPoint)) {
 
 				float angleDiffuseCos = normVector * lightDirection;
 				float angleReflectCos = powf(reflectorVec * lightDirection, 9);
