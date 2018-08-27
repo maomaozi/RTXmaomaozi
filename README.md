@@ -13,14 +13,15 @@
 - [x] 抗锯齿
 - [x] 普通Plane
 - [x] Plane棋盘格
+- [x] 聚光灯光源
 
 ### Need to do
 
 - [ ] 修正漫反射对于间接来源反射光的不精确模拟
 - [ ] 添加体积光源支持
+- [ ] 添加软阴影支持
 - [ ] 添加三角形片支持
 - [ ] 添加三角形拼接3D物体
-- [ ] 添加软阴影支持
 - [ ] 添加贴图支持
 - [ ] GPU?
 
@@ -38,3 +39,5 @@
 ### Demo Scene:
 
 ![Demo](http://121.49.97.197:10101/maozi/RTXmaomaozi/raw/12cbc0469f770de8aa3741802555e9cba4771876/demo.png "Demo")
+
+![Demo2](http://121.49.97.197:10101/maozi/RTXmaomaozi/raw/8529551b58a08271d5f6d524d1150dfd9e6cdae6/demo2.png "Demo2")
