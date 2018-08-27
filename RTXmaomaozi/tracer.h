@@ -16,45 +16,68 @@ public:
 
 private:
 
-	bool isShadow(const Vec3 &lightDirection, float lightDistance, const Point3 &emitPoint)
+	int isShadow(const Vec3 &lightDirection, float lightDistance, const Intersection &intersectin, bool isInMedium)
 	{
+		// three state:
+		// 0. no shadowed
+		// -1. inner shadowed by it self but not shadow by other(only happend while isInMedium is true)
+		// 1. shadow by other
+
 		// Check if any object between lightSource and emitPoint
 		// If there is something, return true
 
+		int result = 0;	// no shadowed
+
 		for (auto objIter = objects.begin(); objIter != objects.end(); ++objIter)
 		{
-			// if any object block this light source 
-			float distance = (*objIter)->getIntersection(emitPoint, lightDirection, false);
+			// if any object block this light source, in medium will not block by medium itself 
+			float distance = (*objIter)->getIntersection(intersectin.entryPoint, lightDirection, isInMedium);
 
 			if (distance != NO_INTERSECTION && distance < lightDistance)
 			{
 				// block by some object front fo light source
-				return true;
+				if (isInMedium && intersectin.obj == (*objIter).get())
+				{
+					result = -1;
+				}
+				else
+				{
+					return 1;
+				}
 			}
 		}
 
 		// can reach light source direct
-		return false;
+		return result;
 	}
 
 
-	void getDirectLight(const Point3 &nowPoint, const Vec3 &reflectorVec, const Vec3 &normVector, float diffuseFactor, Color &accumulateLightColor)
+	void getDirectLight(const Intersection &intersection, const Vec3 &reflectorVec, const Vec3 &normVector, float diffuseFactor, Color &accumulateLightColor, bool isInMedium)
 	{
 		for (auto lightIter = lights.begin(); lightIter != lights.end(); ++lightIter)
 		{
 			// Only process direct reflactor(illuminate by light source)
 
-			Vec3 lightDirection = (*lightIter)->position - nowPoint;
+			Vec3 lightDirection = (*lightIter)->position - intersection.entryPoint;
 			float lightLength = lightDirection.length();
 
 			lightDirection.normalize();
 
-			if (!isShadow(lightDirection, lightLength, nowPoint)) {
+			int shadowState = isShadow(lightDirection, lightLength, intersection, isInMedium);
+
+			if (shadowState == -1)
+			{
+				int a = 1;
+			}
+
+			if (shadowState == 0 || shadowState == -1) {
 
 				float angleDiffuseCos = normVector * lightDirection;
-				float angleReflectCos = powf(reflectorVec * lightDirection, 9);
+				float angleReflectCos = powf(reflectorVec * lightDirection, 29);
+				angleReflectCos = powf(angleReflectCos, 29);
 
-				if (angleReflectCos < (1.0f - diffuseFactor)) angleReflectCos = 0.0f;
+				if (angleDiffuseCos < 0.0f) angleDiffuseCos = 0.0f;
+				if (angleReflectCos < 0.0f) angleReflectCos = 0.0f;
 
 				Color lightColor = (*lightIter)->getLightStrength(lightDirection, lightLength, normVector);
 
@@ -117,7 +140,7 @@ private:
 		if (!getFirstIntersection(emitPoint, rayVec, isInMedium, castObj, firstIntersection))
 		{
 			// No intersection, return background color
-			if (nowDepth == _traceDepth)
+			if (castObj == nullptr)
 			{
 				light = backgroundColor;
 				return;
@@ -145,9 +168,10 @@ private:
 
 		// TODO: add monte carlo simulation of diffuse
 		{
-			// sub step 1: create some ray depends on diffuseFactor, more diffuseFactor means more angel
-			// sub step 2: get the light come from the diffuse
-			// sub step 3: blend light, use (norm * ray) as weight
+			// sub step 1: create some ray 
+			// sub step 2: check ray depends on diffuseFactor, greater diffuseFactor means more angel is in range
+			// sub step 3: get the light come from the diffuse
+			// sub step 4: blend light, use (norm * ray) as weight
 		}
 
 
@@ -161,13 +185,12 @@ private:
 		//			if shadow ray has intersection with object
 		//			(some thing between point and light source), then cast shadow
 		//			otherwise collect each light strength and contribute to color
+
 		// Cast shadow to every light source
-		if (!isInMedium)
-		{
-			Vec3 norm(0, 0, 0);
-			firstIntersection.obj->getNormVecAt(firstIntersection.entryPoint, norm);
-			getDirectLight(firstIntersection.entryPoint, reflectionRay, norm, firstIntersection.obj->getDiffuseFactor(), castOnColor);
-		}
+
+		Vec3 norm(0, 0, 0);
+		firstIntersection.obj->getNormVecAt(firstIntersection.entryPoint, norm);
+		getDirectLight(firstIntersection, isInMedium ? refractionRay : reflectionRay, norm, firstIntersection.obj->getDiffuseFactor(), castOnColor, isInMedium);
 
 		// Step 6: Process reflect color
 		if (totalReflection)
@@ -178,10 +201,13 @@ private:
 		else
 		{
 			// castOnColor will be never modify again
-			castOnColor *= firstIntersection.obj->getReflectionRatio(firstIntersection.entryPoint);
+			castOnColor *= isInMedium ? 
+				firstIntersection.obj->getRefractionRatio(firstIntersection.entryPoint) :
+				firstIntersection.obj->getReflectionRatio(firstIntersection.entryPoint);
+
 			light += castOnColor;
 
-			// then add refraction
+			// then add refraction of other object
 			Color refractionColor(0, 0, 0);
 			castTraceRay(firstIntersection.entryPoint, refractionRay, firstIntersection.obj, !isInMedium, nowDepth - 1, refractionColor);
 
@@ -190,7 +216,6 @@ private:
 			light += refractionColor;
 		}
 
-		//return reflectColor;
 	}
 
 public:
@@ -211,8 +236,6 @@ public:
 		backgroundColor = bgColor;
 		globalLight = ambientLight;
 
-		_traceDepth = traceDepth;
-
 		// calculate color of each pixel
 #pragma omp parallel
 		{
@@ -221,7 +244,6 @@ public:
 			{
 				for (int x = 0; x < (int)camera.getWidth(); ++x)
 				{
-
 					Vec3 nowViewRay = camera.getViewRay(x, y);
 					Vec3 nextViewRayX = camera.getViewRay(x + 1, y);
 					Vec3 nextViewRayY = camera.getViewRay(x, y + 1);
@@ -237,7 +259,8 @@ public:
 					{
 						for (int subX = 0; subX < antiAliasScale; ++subX) 
 						{
-							castTraceRay(camera.getViewPoint(), nowViewRay + diffY * subY + diffX * subX, nullptr, false, traceDepth, buffer);
+							//if(x == 640 && y == 300)
+								castTraceRay(camera.getViewPoint(), nowViewRay + diffY * subY + diffX * subX, nullptr, false, traceDepth, buffer);
 						}
 					}
 					
@@ -252,10 +275,8 @@ private:
 	Color globalLight;
 	Color backgroundColor;
 
-	int _traceDepth;
-
 	std::vector<std::shared_ptr<Object>> objects;						// store all objects
-	std::vector<std::shared_ptr<Light>> lights;							// use dot light here
+	std::vector<std::shared_ptr<Light>> lights;							// store all light
 };
 
 Tracer::Tracer()
