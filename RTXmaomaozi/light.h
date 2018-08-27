@@ -158,8 +158,7 @@ public:
 	{
 		float offsetCosAngle = -lightDirection * direct;
 
-		float decay = powf(offsetCosAngle, powf(29, decayRatio));
-		decay = powf(decay, powf(29, decayRatio));
+		float decay = powf(offsetCosAngle, 1 / decayRatio);
 
 		if (decay < 0) decay = 0;
 
