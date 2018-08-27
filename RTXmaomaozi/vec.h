@@ -233,6 +233,13 @@ struct Vec3 : public Struct3
 		z *= rhs;
 	}
 
+	void operator/=(float rhs)
+	{
+		x /= rhs;
+		y /= rhs;
+		z /= rhs;
+	}
+
 
 	Vec3 operator/(float rhs) const
 	{

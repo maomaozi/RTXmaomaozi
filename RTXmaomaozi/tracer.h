@@ -52,7 +52,7 @@ private:
 	}
 
 
-	void getDirectLight(const Intersection &intersection, const Vec3 &reflectorVec, const Vec3 &normVector, float diffuseFactor, Color &accumulateLightColor, bool isInMedium)
+	void getDirectLight(const Intersection &intersection, const Vec3 &rayVec, const Vec3 &normVector, bool isInMedium, Color &accumulateLightColor)
 	{
 		for (auto lightIter = lights.begin(); lightIter != lights.end(); ++lightIter)
 		{
@@ -65,15 +65,10 @@ private:
 
 			int shadowState = isShadow(lightDirection, lightLength, intersection, isInMedium);
 
-			if (shadowState == -1)
-			{
-				int a = 1;
-			}
-
 			if (shadowState == 0 || shadowState == -1) {
 
 				float angleDiffuseCos = normVector * lightDirection;
-				float angleReflectCos = powf(reflectorVec * lightDirection, 29);
+				float angleReflectCos = powf(rayVec * lightDirection, 29);
 				angleReflectCos = powf(angleReflectCos, 29);
 
 				if (angleDiffuseCos < 0.0f) angleDiffuseCos = 0.0f;
@@ -82,11 +77,13 @@ private:
 				Color lightColor = (*lightIter)->getLightStrength(lightDirection, lightLength, normVector);
 
 				// come from diffuse
-				accumulateLightColor += lightColor * angleDiffuseCos * diffuseFactor;
+				accumulateLightColor += lightColor * angleDiffuseCos * intersection.obj->getDiffuseFactor();
 
 				// come from real reflector
-				accumulateLightColor += lightColor * angleReflectCos * (1 - diffuseFactor);
+				accumulateLightColor += lightColor * angleReflectCos * (1 - intersection.obj->getDiffuseFactor());
+
 			}
+
 		}
 
 		accumulateLightColor += globalLight;
@@ -120,21 +117,52 @@ private:
 	}
 
 
+	void deffuseMonteCarlo(const Intersection &firstIntersection, const Vec3 &rayVec,  bool isInMedium, int nowDepth, Color &reflectionColor)
+	{
+		Color diffuseColor(0, 0, 0);
+		Vec3 p(0, 0, 0);
+		for (int i = 0; i < 500; ++i)
+		{
+			// vector create referer to https://math.stackexchange.com/questions/2464998/random-vector-with-fixed-angle
+
+			float targetCosAngel = 1.0f - rand() % (int)(firstIntersection.obj->getDiffuseFactor() * 100000) / 100000.0f;
+
+			p.x = (rand() % 10000 - 5000) / 1000.0f;
+			p.y = (rand() % 10000 - 5000) / 1000.0f;
+			p.z = (rand() % 10000 - 5000) / 1000.0f;
+
+			p -= rayVec * ((p * rayVec) / (rayVec * rayVec));
+
+			p /= p.length();
+			p *= rayVec.length();
+
+			Vec3 v = rayVec * targetCosAngel;
+			p *= sqrtf(1.0f - targetCosAngel * targetCosAngel);
+			v += p;
+
+			diffuseColor.r = diffuseColor.g = diffuseColor.b = 0.0f;
+			castTraceRay(firstIntersection.entryPoint, v, firstIntersection.obj, isInMedium, nowDepth - 1, diffuseColor);
+
+			diffuseColor *= targetCosAngel;
+			reflectionColor += diffuseColor;
+		}
+
+		reflectionColor /= 500.0f;
+	}
+
+
 	// Cast a ray to object and add the light of it on color parameter
-	void castTraceRay(const Point3 &emitPoint, const Vec3 &rayVec, Object *castObj, bool isInMedium, size_t nowDepth, Color &light)
+	void castTraceRay(const Point3 &emitPoint, const Vec3 &rayVec, Object *castObj, bool isInMedium, int nowDepth, Color &light)
 	{
 		// Step 1:	determine if depth reach max trace depth
-		if (nowDepth == 0)
+		if (nowDepth <= 0)
 		{
-			// No contribute
-			return;
+			return;		// Stop iter
 		}
 
 		// Step 2:	Go through each object and calculate intersection
 		//			find which intersection is most near the emitPoint
 		//			if there is no intersection, return background color
-
-
 		Intersection firstIntersection;
 
 		if (!getFirstIntersection(emitPoint, rayVec, isInMedium, castObj, firstIntersection))
@@ -151,7 +179,6 @@ private:
 			}
 		}
 
-		//Color reflectColor(0, 0, 0);		// Actual reflect light color
 		Color castOnColor(0, 0, 0);			// Direct and indirect light shade on this object
 
 		// Step 3:	Process reflection, calculate reflection ray and recursion trace
@@ -159,21 +186,24 @@ private:
 		firstIntersection.obj->calcReflectionRay(firstIntersection.entryPoint, rayVec, reflectionRay);
 
 		Color reflectionColor(0, 0, 0);
-		castTraceRay(firstIntersection.entryPoint, reflectionRay, firstIntersection.obj, isInMedium, nowDepth - 1, reflectionColor);
 
-		// if object is diffuse, direct reflector will have less weight
-		reflectionColor *= (1 - firstIntersection.obj->getDiffuseFactor());
-
-		castOnColor += reflectionColor;
-
-		// TODO: add monte carlo simulation of diffuse
+		// If object deffuse light 
+		if (firstIntersection.obj->getDiffuseFactor() < 0.001f || castObj != nullptr)
 		{
-			// sub step 1: create some ray 
-			// sub step 2: check ray depends on diffuseFactor, greater diffuseFactor means more angel is in range
-			// sub step 3: get the light come from the diffuse
-			// sub step 4: blend light, use (norm * ray) as weight
-		}
+			castTraceRay(firstIntersection.entryPoint, reflectionRay, firstIntersection.obj, isInMedium, nowDepth - 1, reflectionColor);
 
+			// if object is diffuse, direct reflector will have less weight
+			reflectionColor *= (1 - firstIntersection.obj->getDiffuseFactor());
+
+			castOnColor += reflectionColor;
+		}
+		else 
+		{
+			// monte-carlo simulation of diffuse
+			// we only do this for first level trace 
+			deffuseMonteCarlo(firstIntersection, reflectionRay, isInMedium, nowDepth, reflectionColor);
+			castOnColor += reflectionColor;
+		}
 
 		// Step 4:	Process refraction, calculate refraction ray and recursion trace
 		//			If total reflection happend, no need to calculate refraction
@@ -190,16 +220,16 @@ private:
 
 		Vec3 norm(0, 0, 0);
 		firstIntersection.obj->getNormVecAt(firstIntersection.entryPoint, norm);
-		getDirectLight(firstIntersection, isInMedium ? refractionRay : reflectionRay, norm, firstIntersection.obj->getDiffuseFactor(), castOnColor, isInMedium);
+
+		if(!isInMedium)
+			getDirectLight(firstIntersection,  reflectionRay, norm, isInMedium, castOnColor);
 
 		// Step 6: Process reflect color
-		if (totalReflection)
+		if (!totalReflection)
 		{
-			 //total reflection
-			light += castOnColor;
-		}
-		else
-		{
+			if(isInMedium)
+				getDirectLight(firstIntersection, refractionRay, norm, isInMedium, castOnColor);
+
 			// castOnColor will be never modify again
 			castOnColor *= isInMedium ? 
 				firstIntersection.obj->getRefractionRatio(firstIntersection.entryPoint) :
@@ -215,7 +245,6 @@ private:
 		
 			light += refractionColor;
 		}
-
 	}
 
 public:
@@ -259,11 +288,10 @@ public:
 					{
 						for (int subX = 0; subX < antiAliasScale; ++subX) 
 						{
-							//if(x == 640 && y == 300)
-								castTraceRay(camera.getViewPoint(), nowViewRay + diffY * subY + diffX * subX, nullptr, false, traceDepth, buffer);
+							castTraceRay(camera.getViewPoint(), nowViewRay + diffY * subY + diffX * subX, nullptr, false, traceDepth, buffer);
 						}
 					}
-					
+
 					buffer /= (float)(antiAliasScale * antiAliasScale);
 					bitmap[x + y * (int)camera.getWidth()] = buffer.getColor();
 				}
