@@ -40,4 +40,4 @@
 
 ![Demo](http://121.49.97.197:10101/maozi/RTXmaomaozi/raw/12cbc0469f770de8aa3741802555e9cba4771876/demo.png "Demo")
 
-![Demo2](http://121.49.97.197:10101/maozi/RTXmaomaozi/raw/8529551b58a08271d5f6d524d1150dfd9e6cdae6/demo2.png "Demo2")
+![Demo2](http://121.49.97.197:10101/maozi/RTXmaomaozi/raw/70309615dd3729a4b90064e8883fd344229297fd/demo2.png "Demo2")
