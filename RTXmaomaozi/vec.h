@@ -32,23 +32,20 @@ struct Struct3
 	Struct3(float x, float y, float z) : x(x), y(y), z(z) {}
 #endif
 
-	Struct3 &operator+=(const Struct3 &rhs)
+	void operator+=(const Struct3 &rhs)
 	{
 		x += rhs.x;
 		y += rhs.y;
 		z += rhs.z;
 
-		return *this;
 	}
 
 
-	Struct3 &operator-=(const Struct3 &rhs)
+	void operator-=(const Struct3 &rhs)
 	{
 		x -= rhs.x;
 		y -= rhs.y;
 		z -= rhs.z;
-
-		return *this;
 	}
 
 	float operator[](int i) const
@@ -176,7 +173,7 @@ struct Vec3 : public Struct3
 #ifdef USE_SSE_AVX
 		return sqrtf(powf(x, 2) + powf(y, 2) + powf(z, 2));
 #else
-		return sqrtf(powf(x, 2) + powf(y, 2) + powf(z, 2));
+		return sqrtf(x * x + y * y + z * z);
 #endif
 		
 	}
@@ -210,19 +207,19 @@ struct Vec3 : public Struct3
 
 	Vec3 operator+(const Vec3 &rhs) const
 	{
-		return Vec3(rhs.x + x, rhs.y + y, rhs.z + z);
+		return std::move(Vec3(rhs.x + x, rhs.y + y, rhs.z + z));
 	}
 
 
 	Vec3 operator-(const Vec3 &rhs) const
 	{
-		return Vec3(x - rhs.x, y - rhs.y, z - rhs.z);
+		return std::move(Vec3(x - rhs.x, y - rhs.y, z - rhs.z));
 	}
 
 
 	Vec3 operator*(float rhs) const
 	{
-		return Vec3(x * rhs, y * rhs, z * rhs);
+		return std::move(Vec3(x * rhs, y * rhs, z * rhs));
 	}
 
 
@@ -243,7 +240,7 @@ struct Vec3 : public Struct3
 
 	Vec3 operator/(float rhs) const
 	{
-		return Vec3(x / rhs, y / rhs, z / rhs);
+		return std::move(Vec3(x / rhs, y / rhs, z / rhs));
 	}
 
 
@@ -255,7 +252,7 @@ struct Vec3 : public Struct3
 
 	Vec3 operator-() const
 	{
-		return Vec3(-x, -y, -z);
+		return std::move(Vec3(-x, -y, -z));
 	}
 };
 
@@ -279,26 +276,26 @@ struct Point3 : public Struct3
 	//	move point alone vector
 	Point3 operator+(const Vec3 &rhs) const
 	{
-		return Point3(x + rhs.x, y + rhs.y, z + rhs.z);
+		return std::move(Point3(x + rhs.x, y + rhs.y, z + rhs.z));
 	}
 
 
 	//	move point alone vector
 	Point3 operator-(const Vec3 &rhs) const
 	{
-		return Point3(x - rhs.x, y - rhs.y, z - rhs.z);
+		return std::move(Point3(x - rhs.x, y - rhs.y, z - rhs.z));
 	}
 
 
 	//	calculate vector between two points
 	Vec3 operator-(const Point3 &rhs) const
 	{
-		return Vec3(x - rhs.x, y - rhs.y, z - rhs.z);
+		return std::move(Vec3(x - rhs.x, y - rhs.y, z - rhs.z));
 	}
 
 
 	Point3 operator-() const
 	{
-		return Point3(-x, -y, -z);
+		return std::move(Point3(-x, -y, -z));
 	}
 };

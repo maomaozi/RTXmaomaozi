@@ -5,9 +5,6 @@
 #include "light.h"
 #include "camera.h"
 
-std::default_random_engine e;
-std::uniform_real_distribution<double> u(-1, 1);
-
 class Tracer
 {
 public:
@@ -57,33 +54,67 @@ private:
 	{
 		for (auto lightIter = lights.begin(); lightIter != lights.end(); ++lightIter)
 		{
-			// Only process direct reflactor(illuminate by light source)
-			Vec3 lightDirection = (*lightIter)->position - intersection.entryPoint;
-			float lightLength = lightDirection.length();
+			
+			Color lightBuffer(0, 0, 0);
 
-			lightDirection.normalize();
+			int sampleTime = 0;
+			VolumnLight *vLight = nullptr;
 
-			int shadowState = isShadow(lightDirection, lightLength, intersection, isInMedium);
 
-			if (shadowState == 0 || shadowState == -1) 
+			if ((*lightIter)->hasVolume()) 
 			{
-
-				float angleDiffuseCos = normVector * lightDirection;
-				float angleReflectCos = powf(rayVec * lightDirection, 29);
-				angleReflectCos = powf(angleReflectCos, 29);
-
-				if (angleDiffuseCos < 0.0f) angleDiffuseCos = 0.0f;
-				if (angleReflectCos < 0.0f) angleReflectCos = 0.0f;
-
-				Color lightColor = (*lightIter)->getLightStrength(lightDirection, lightLength, normVector);
-
-				// come from diffuse
-				accumulateLightColor += lightColor * angleDiffuseCos * intersection.obj->getDiffuseFactor();
-
-				// come from real reflector
-				accumulateLightColor += lightColor * angleReflectCos * (1 - intersection.obj->getDiffuseFactor());
+				vLight = dynamic_cast<VolumnLight *>((*lightIter).get());
+				sampleTime = 10;
+			}
+			else
+			{
+				sampleTime = 1;
 			}
 
+			Vec3 lightDirection(0, 0, 0);
+
+			for (int i = 0; i < sampleTime; ++i)
+			{
+				// Only process direct reflactor(illuminate by light source)
+
+				float lightLength;
+
+				if (vLight)
+				{
+					lightLength = vLight->sampleRayVec(intersection.entryPoint, lightDirection);
+				}
+				else
+				{
+					lightDirection = (*lightIter)->position - intersection.entryPoint;
+					lightLength = lightDirection.length();
+				}
+
+				lightDirection.normalize();
+
+				int shadowState = isShadow(lightDirection, lightLength, intersection, isInMedium);
+
+				if (shadowState == 0 || shadowState == -1)
+				{
+
+					float angleDiffuseCos = normVector * lightDirection;
+					float angleReflectCos = powf(rayVec * lightDirection, 29);
+					angleReflectCos = powf(angleReflectCos, 29);
+
+					if (angleDiffuseCos < 0.0f) angleDiffuseCos = 0.0f;
+					if (angleReflectCos < 0.0f) angleReflectCos = 0.0f;
+
+					Color lightColor = (*lightIter)->getLightStrength(lightDirection, lightLength, normVector);
+
+					// come from diffuse
+					lightBuffer += lightColor * angleDiffuseCos * intersection.obj->getDiffuseFactor();
+
+					// come from real reflector
+					lightBuffer += lightColor * angleReflectCos * (1 - intersection.obj->getDiffuseFactor());
+				}
+			}
+
+			lightBuffer /= sampleTime;
+			accumulateLightColor += lightBuffer;
 		}
 
 		accumulateLightColor += globalLight;
@@ -119,6 +150,8 @@ private:
 
 	void deffuseMonteCarlo(const Intersection &firstIntersection, const Vec3 &rayVec,  bool isInMedium, int nowDepth, Color &reflectionColor)
 	{
+		std::default_random_engine e;
+		std::uniform_real_distribution<double> u(-1, 1);
 
 		Color diffuseColor(0, 0, 0);
 		Vec3 p(0, 0, 0);

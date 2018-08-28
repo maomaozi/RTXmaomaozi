@@ -16,46 +16,46 @@ struct Color
 
 	Color operator+(const Color &rhs) const
 	{
-		return Color(r + rhs.r, g + rhs.g, b + rhs.b);
+		return std::move(Color(r + rhs.r, g + rhs.g, b + rhs.b));
 	}
 
 	Color operator-(const Color &rhs) const
 	{
-		return Color(r - rhs.r, g - rhs.g, b - rhs.b);
+		return std::move(Color(r - rhs.r, g - rhs.g, b - rhs.b));
 	}
 
 	Color operator*(const Color &rhs) const
 	{
-		return Color(r * rhs.r, g * rhs.g, b * rhs.b);
+		return std::move(Color(r * rhs.r, g * rhs.g, b * rhs.b));
 	}
 
 	Color operator/(const Color &rhs) const
 	{
-		return Color(r / rhs.r, g / rhs.g, b / rhs.b);
+		return std::move(Color(r / rhs.r, g / rhs.g, b / rhs.b));
 	}
 
 
 	Color operator+(float rhs) const
 	{
-		return Color(r + rhs, g + rhs, b + rhs);
+		return std::move(Color(r + rhs, g + rhs, b + rhs));
 	}
 
 
 	Color operator-(float rhs) const
 	{
-		return Color(r - rhs, g - rhs, b - rhs);
+		return std::move(Color(r - rhs, g - rhs, b - rhs));
 	}
 
 
 	Color operator*(float rhs) const
 	{
-		return Color (r * rhs, g * rhs, b * rhs);
+		return std::move(Color (r * rhs, g * rhs, b * rhs));
 	}
 
 
 	Color operator/(float rhs) const
 	{
-		return Color((r / rhs), (g / rhs), (b / rhs));
+		return std::move(Color((r / rhs), (g / rhs), (b / rhs)));
 	}
 
 
@@ -114,7 +114,7 @@ struct Color
 class Light 
 {
 public:
-	Light(Point3 position, Color color, float strength) : position(position), color(color), strength(strength)
+	Light(const Point3 &position, const Color &color, float strength) : position(position), color(color), strength(strength)
 	{
 		;
 	}
@@ -122,9 +122,37 @@ public:
 public:
 	virtual Color getLightStrength(const Vec3 &lightDirection, float distance, const Vec3 &objNorm) const = 0;
 
+	virtual bool hasVolume() const 
+	{
+		return false;
+	}
+
 	Point3 position;
 	float strength;
 	Color color;
+};
+
+class VolumnLight : public Light
+{
+public:
+	VolumnLight(const Point3 &position, const Color &color, float strength) :
+		Light(position, color, strength),
+		u(-1, 1)
+	{
+		;
+	}
+
+public:
+	virtual bool hasVolume() const
+	{
+		return true;
+	}
+
+	virtual float sampleRayVec(const Point3 emitPoint, Vec3 &newRayvec) = 0;
+
+protected:
+	std::default_random_engine e;
+	std::uniform_real_distribution<double> u;
 };
 
 
@@ -136,7 +164,7 @@ public:
 public:
 	Color getLightStrength(const Vec3 &lightDirection, float distance, const Vec3 &objNorm) const
 	{
-		return color * strength;
+		return std::move(color * strength);
 	}
 
 };
@@ -145,7 +173,7 @@ public:
 class SpotLight : public Light
 {
 public:
-	SpotLight(Point3 position, Color color, float strength, const Vec3 &direct, float decayRatio) :
+	SpotLight(const Point3 &position, const Color &color, float strength, const Vec3 &direct, float decayRatio) :
 		Light(position, color, strength),
 		direct(direct),
 		decayRatio(decayRatio)
@@ -162,7 +190,10 @@ public:
 
 		if (decay < 0) decay = 0;
 
-		return color * strength * decay;
+		Color c = color * strength;
+		c *= decay;
+
+		return std::move(c);
 	}
 
 private:
@@ -172,7 +203,51 @@ private:
 };
 
 
-struct Object;
+class SphereLight : public VolumnLight
+{
+public:
+	SphereLight(const Point3 &position, const Color &color, float strength, float radius) :
+		VolumnLight(position, color, strength),
+		radius(radius),
+		radiusSquare(radius * radius)
+	{
+		;
+	}
+
+	virtual float sampleRayVec(const Point3 emitPoint, Vec3 &newRayVec)
+	{
+		Vec3 v1 = position - emitPoint;
+	
+		float lightDistance = v1.length();
+
+		float targetCosAngle = lightDistance / sqrtf(lightDistance * lightDistance + radiusSquare * ((u(e) + 1.0f) / 2));
+
+		Vec3 p(u(e), u(e), u(e));
+
+		p -= v1 * ((p * v1) / (v1 * v1));
+
+		p /= p.length();
+		p *= lightDistance;
+
+		newRayVec = v1 * targetCosAngle;
+		p *= sqrtf(1.0f - targetCosAngle * targetCosAngle);
+		newRayVec += p;
+
+		return lightDistance;
+	}
+
+	Color getLightStrength(const Vec3 &lightDirection, float distance, const Vec3 &objNorm) const
+	{
+		return std::move(color * strength);
+	}
+
+private:
+	float radius;
+	float radiusSquare;
+};
+
+
+class Object;
 
 struct Ray 
 {
