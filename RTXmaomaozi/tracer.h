@@ -5,7 +5,8 @@
 #include "light.h"
 #include "camera.h"
 
-
+std::default_random_engine e;
+std::uniform_real_distribution<double> u(-1, 1);
 
 class Tracer
 {
@@ -57,7 +58,6 @@ private:
 		for (auto lightIter = lights.begin(); lightIter != lights.end(); ++lightIter)
 		{
 			// Only process direct reflactor(illuminate by light source)
-
 			Vec3 lightDirection = (*lightIter)->position - intersection.entryPoint;
 			float lightLength = lightDirection.length();
 
@@ -65,7 +65,8 @@ private:
 
 			int shadowState = isShadow(lightDirection, lightLength, intersection, isInMedium);
 
-			if (shadowState == 0 || shadowState == -1) {
+			if (shadowState == 0 || shadowState == -1) 
+			{
 
 				float angleDiffuseCos = normVector * lightDirection;
 				float angleReflectCos = powf(rayVec * lightDirection, 29);
@@ -81,7 +82,6 @@ private:
 
 				// come from real reflector
 				accumulateLightColor += lightColor * angleReflectCos * (1 - intersection.obj->getDiffuseFactor());
-
 			}
 
 		}
@@ -119,17 +119,30 @@ private:
 
 	void deffuseMonteCarlo(const Intersection &firstIntersection, const Vec3 &rayVec,  bool isInMedium, int nowDepth, Color &reflectionColor)
 	{
+
 		Color diffuseColor(0, 0, 0);
 		Vec3 p(0, 0, 0);
-		for (int i = 0; i < 500; ++i)
+		Vec3 norm(0, 0, 0);
+		firstIntersection.obj->getNormVecAt(firstIntersection.entryPoint, norm);
+
+		float ratio = acosf(-1.99 * firstIntersection.obj->getDiffuseFactor() + 0.99) / PI;
+
+		for (int i = 0; i < 1000 * ratio; ++i)
 		{
 			// vector create referer to https://math.stackexchange.com/questions/2464998/random-vector-with-fixed-angle
+			
+			//float targetCosAngel = -(rand() % (int)(firstIntersection.obj->getDiffuseFactor() * RAND_MAX) - RAND_MAX / 2) / (RAND_MAX / 2.0f);
 
-			float targetCosAngel = 1.0f - rand() % (int)(firstIntersection.obj->getDiffuseFactor() * 100000) / 100000.0f;
+			//p.x = (rand() % RAND_MAX - RAND_MAX / 2) / (RAND_MAX / 2.0f);
+			//p.y = (rand() % RAND_MAX - RAND_MAX / 2) / (RAND_MAX / 2.0f);
+			//p.z = (rand() % RAND_MAX - RAND_MAX / 2) / (RAND_MAX / 2.0f);
 
-			p.x = (rand() % 10000 - 5000) / 1000.0f;
-			p.y = (rand() % 10000 - 5000) / 1000.0f;
-			p.z = (rand() % 10000 - 5000) / 1000.0f;
+			// use new c++11 random engine here
+			float targetCosAngel = 1 + (u(e) - 1) * firstIntersection.obj->getDiffuseFactor();
+
+			p.x = u(e);
+			p.y = u(e);
+			p.z = u(e);
 
 			p -= rayVec * ((p * rayVec) / (rayVec * rayVec));
 
@@ -141,13 +154,16 @@ private:
 			v += p;
 
 			diffuseColor.r = diffuseColor.g = diffuseColor.b = 0.0f;
-			castTraceRay(firstIntersection.entryPoint, v, firstIntersection.obj, isInMedium, nowDepth - 1, diffuseColor);
+			castTraceRay(firstIntersection.entryPoint, v, firstIntersection.obj, isInMedium, 3, diffuseColor);
 
-			diffuseColor *= targetCosAngel;
+			diffuseColor *= norm * v;
+
 			reflectionColor += diffuseColor;
+
 		}
 
-		reflectionColor /= 500.0f;
+		reflectionColor /= 30 * ratio;
+
 	}
 
 
@@ -188,7 +204,7 @@ private:
 		Color reflectionColor(0, 0, 0);
 
 		// If object deffuse light 
-		if (firstIntersection.obj->getDiffuseFactor() < 0.001f || castObj != nullptr)
+		if (1 || firstIntersection.obj->getDiffuseFactor() < 0.0001f || castObj != nullptr)
 		{
 			castTraceRay(firstIntersection.entryPoint, reflectionRay, firstIntersection.obj, isInMedium, nowDepth - 1, reflectionColor);
 
@@ -222,9 +238,21 @@ private:
 		firstIntersection.obj->getNormVecAt(firstIntersection.entryPoint, norm);
 
 		if(!isInMedium)
-			getDirectLight(firstIntersection,  reflectionRay, norm, isInMedium, castOnColor);
+			if (firstIntersection.obj->getIsLighting())
+			{
+				float angleLightCos = -rayVec * norm;
+				castOnColor += globalLight;
+				Color light = firstIntersection.obj->getReflectionRatio(firstIntersection.entryPoint);
+				light *= 255.0;
+				light *= angleLightCos;
+				castOnColor += light;
+			}
+			else
+			{
+				getDirectLight(firstIntersection, reflectionRay, norm, isInMedium, castOnColor);
+			}
 
-		// Step 6: Process reflect color
+		// Step 6: Process light come from reflect
 		if (!totalReflection)
 		{
 			if(isInMedium)
@@ -288,6 +316,7 @@ public:
 					{
 						for (int subX = 0; subX < antiAliasScale; ++subX) 
 						{
+							//if(y >= 160 && y <= 200)
 							castTraceRay(camera.getViewPoint(), nowViewRay + diffY * subY + diffX * subX, nullptr, false, traceDepth, buffer);
 						}
 					}

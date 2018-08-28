@@ -61,6 +61,11 @@ public:
 		return refractionRatio;
 	}
 
+	virtual bool getIsLighting() 
+	{
+		return false;
+	}
+
 	float getRefractionEta() const
 	{
 		return refractionEta;
@@ -163,6 +168,18 @@ private:
 	Point3 center;
 	float radius;
 	float radiusSquare;
+};
+
+
+class LightingSphere : public Sphere 
+{
+public:
+	using Sphere::Sphere;
+
+	virtual bool getIsLighting()
+	{
+		return true;
+	}
 };
 
 
