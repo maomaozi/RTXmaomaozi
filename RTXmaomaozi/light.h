@@ -173,7 +173,7 @@ public:
 class SpotLight : public Light
 {
 public:
-	SpotLight(const Point3 &position, const Color &color, float strength, const Vec3 &direct, float decayRatio) :
+	SpotLight(const Point3 &position, const Color &color, float strength, const Vec3 &direct, float decayRatio):
 		Light(position, color, strength),
 		direct(direct),
 		decayRatio(decayRatio)
@@ -236,15 +236,59 @@ public:
 		return lightDistance;
 	}
 
-	Color getLightStrength(const Vec3 &lightDirection, float distance, const Vec3 &objNorm) const
-	{
-		return std::move(color * strength);
-	}
-
 private:
 	float radius;
 	float radiusSquare;
 };
+
+
+
+class SphereDotLight : public SphereLight
+{
+public:
+	using SphereLight::SphereLight;
+
+
+public:
+	virtual Color getLightStrength(const Vec3 &lightDirection, float distance, const Vec3 &objNorm) const
+	{
+		return std::move(color * strength);
+	}
+};
+
+
+class SphereSpotLight : public SphereLight
+{
+public:
+	// SpotLight(const Point3 &position, const Color &color, float strength, const Vec3 &direct, float decayRatio)
+	SphereSpotLight(const Point3 &position, const Color &color, float strength, const Vec3 &direct, float decayRatio, float radius) :
+		SphereLight(position, color, strength, radius),
+		direct(direct),
+		decayRatio(decayRatio)
+	{
+		this->direct.normalize();
+	}
+
+public:
+	Color getLightStrength(const Vec3 &lightDirection, float distance, const Vec3 &objNorm) const
+	{
+		float offsetCosAngle = -lightDirection * direct;
+
+		float decay = powf(offsetCosAngle, 1 / decayRatio);
+
+		if (decay < 0) decay = 0;
+
+		Color c = color * strength;
+		c *= decay;
+
+		return std::move(c);
+	}
+
+private:
+	Vec3 direct;
+	float decayRatio;
+};
+
 
 
 class Object;
