@@ -1,6 +1,7 @@
 #pragma once
 #include "vec.h"
 
+#define NO_INTERSECTION -1.0f
 
 struct Color
 {
@@ -148,6 +149,8 @@ public:
 		return true;
 	}
 
+	virtual float getIntersection(const Point3 &emitPoint, const Vec3 &rayVec) const = 0;
+
 	virtual float sampleRayVec(const Point3 emitPoint, Vec3 &newRayvec) = 0;
 
 protected:
@@ -212,6 +215,25 @@ public:
 		radiusSquare(radius * radius)
 	{
 		;
+	}
+
+	virtual float getIntersection(const Point3 &emitPoint, const Vec3 &rayVec) const
+	{
+
+		Vec3 sphereDist = position - emitPoint;
+
+		float sphereDistProjectOnRay = rayVec * sphereDist;
+
+		if (sphereDistProjectOnRay < 0) return NO_INTERSECTION;
+
+		float sphereDistSquare = sphereDist * sphereDist;
+		float sphereRayDistSquare = sphereDistSquare - sphereDistProjectOnRay * sphereDistProjectOnRay;
+
+		if (sphereRayDistSquare >= radiusSquare) return NO_INTERSECTION;
+
+		float intersectionDist = sphereDistProjectOnRay - sqrtf(radiusSquare - sphereRayDistSquare);
+
+		return intersectionDist;
 	}
 
 	virtual float sampleRayVec(const Point3 emitPoint, Vec3 &newRayVec)
@@ -300,8 +322,8 @@ struct Ray
 		;
 	}
 
-	Ray(const Point3 &emitPoint, const Vec3 &rayVec, Object* castObj) : 
-		emitPoint(emitPoint), rayVec(rayVec), castObj(castObj)
+	Ray(const Point3 &emitPoint, const Vec3 &rayVec, Object* castObj, bool isInMedium) :
+		emitPoint(emitPoint), rayVec(rayVec), castObj(castObj), isInMedium(isInMedium)
 	{
 		;
 	}
@@ -309,4 +331,5 @@ struct Ray
 	Point3 emitPoint;
 	Vec3 rayVec;
 	Object *castObj;
+	bool isInMedium;
 };
