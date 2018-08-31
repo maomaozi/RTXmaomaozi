@@ -27,14 +27,15 @@
 - [ ] 添加贴图支持
 - [ ] GPU?
 - [ ] 增加光线物体碰撞预筛选（AABB+规则网格或八叉树）
-
+- [ ] 合并漫反射模拟和普通Phong光照模型
+- [ ] 物体表面漫反射抗锯齿
 
 
 ### Bug already know
 - [x] ~~摄像机转向不正常~~
 - [x] ~~Plane在降低漫反射系数后出现噪点~~
 - [x] ~~Plane不正常的过曝导致反射丢失~~
-- [ ] 表面漫反射蒙特卡洛采样不正常，暂时关闭
+- [ ] 表面漫反射蒙特卡洛采样不正常，暂时关闭(已定位BUG，在新分支中解决)
 
 
 ### Always
@@ -47,3 +48,6 @@
 ![Demo](http://121.49.97.197:10101/maozi/RTXmaomaozi/raw/f997811963cadd276eed63c174fb16c7cde13810/demo.png "Demo")
 
 ![Demo2](http://121.49.97.197:10101/maozi/RTXmaomaozi/raw/f997811963cadd276eed63c174fb16c7cde13810/demo2.png "Demo2")
+
+#### 漫反射原始着色图
+![Demo3](http://121.49.97.197:10101/maozi/RTXmaomaozi/raw/e3fb27ad364fb4a8c2dca448c7f2b781c32056c3/%E6%97%A0%E6%A0%87%E9%A2%98.png "Demo3")
