@@ -64,7 +64,7 @@ private:
 			if ((*lightIter)->hasVolume()) 
 			{
 				vLight = dynamic_cast<VolumnLight *>((*lightIter).get());
-				sampleTime = 100;
+				sampleTime = 10;
 			}
 			else
 			{
