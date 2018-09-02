@@ -317,19 +317,18 @@ class Object;
 
 struct Ray 
 {
-	Ray() : emitPoint(0,0,0), rayVec(0,0,0)
+	Ray() : emitPoint(0,0,0), rayDirect(0,0,0)
 	{
 		;
 	}
 
 	Ray(const Point3 &emitPoint, const Vec3 &rayVec, Object* castObj, bool isInMedium) :
-		emitPoint(emitPoint), rayVec(rayVec), castObj(castObj), isInMedium(isInMedium)
+		emitPoint(emitPoint), rayDirect(rayVec), emitObject(emitObject)
 	{
 		;
 	}
 
 	Point3 emitPoint;
-	Vec3 rayVec;
-	Object *castObj;
-	bool isInMedium;
+	Vec3 rayDirect;
+	Object *emitObject;
 };

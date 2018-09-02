@@ -18,7 +18,7 @@ private:
 	{
 		// three state:
 		// 0. no shadowed
-		// -1. inner shadowed by it self but not shadow by other(only happend while isInMedium is true)
+		// -1. inner shadowed by it self but not shadow by other(only happend while rayInMedium is true)
 		// 1. shadow by other
 
 		// Check if any object between lightSource and emitPoint
@@ -29,7 +29,7 @@ private:
 		for (auto objIter = objects.begin(); objIter != objects.end(); ++objIter)
 		{
 			// if any object block this light source, in medium will not block by medium itself 
-			float distance = (*objIter)->getIntersection(intersectin.entryPoint, lightDirection, isInMedium);
+			float distance = (*objIter)->getIntersection(intersectin.intersectionPoint, lightDirection, isInMedium);
 
 			if (distance != NO_INTERSECTION && distance < lightDistance)
 			{
@@ -50,9 +50,9 @@ private:
 	}
 
 
-	float getFirstIntersection(const Point3 &emitPoint, const Vec3 &rayVec, bool isInMedium, Object *castObj, Intersection &firstIntersection)
+	float getNearestObject(const Point3 &emitPoint, const Vec3 &rayVec, bool isInMedium, Object *castObj, Intersection &firstIntersection)
 	{
-		// rayVec is always normalized
+		// rayDirect is always normalized
 
 		float firstIntersectionDistance = FLT_MAX;		// The most near intersection distance
 		bool isFound = false;							// If we got any intersection
@@ -68,7 +68,7 @@ private:
 				isFound = true;
 				firstIntersectionDistance = intersectionDistance;
 
-				firstIntersection.entryPoint = emitPoint + rayVec * intersectionDistance;
+				firstIntersection.intersectionPoint = emitPoint + rayVec * intersectionDistance;
 				firstIntersection.obj = objIter->get();
 			}
 		}
@@ -84,9 +84,9 @@ private:
 	}
 
 
-	float getFirstlight(const Point3 &emitPoint, const Vec3 &rayVec, Light *&light)
+	float getNearestLight(const Point3 &emitPoint, const Vec3 &rayVec, Light *&light)
 	{
-		// rayVec is always normalized
+		// rayDirect is always normalized
 
 		float firstIntersectionDistance = FLT_MAX;		// The most near intersection distance
 		bool isFound = false;							// If we got any intersection
@@ -124,7 +124,7 @@ private:
 		Color diffuseColor(0, 0, 0);
 		Vec3 p(0, 0, 0);
 		Vec3 norm(0, 0, 0);
-		intersection.obj->getNormVecAt(intersection.entryPoint, norm);
+		intersection.obj->getNormVecAt(intersection.intersectionPoint, norm);
 
 		float ratio = acosf(-2.0f * intersection.obj->getDiffuseFactor() + 1.0f) / PI;
 
@@ -164,7 +164,7 @@ private:
 			}
 
 			diffuseColor.r = diffuseColor.g = diffuseColor.b = 0.0f;
-			castTraceRay(intersection.entryPoint, v, intersection.obj, isInMedium, nowDepth - 1, diffuseColor);
+			castTraceRay(intersection.intersectionPoint, v, intersection.obj, isInMedium, nowDepth - 1, diffuseColor);
 
 			diffuseColor *= powf(norm * v, intersection.obj->getDiffuseFactor());
 
@@ -180,32 +180,30 @@ private:
 
 
 	// Cast a ray to object and add the light of it on color parameter
-	void castTraceRay(const Point3 &emitPoint, const Vec3 &rayVec, Object *castObj, bool isInMedium, int nowDepth, Color &light)
+	void castTraceRay(const Point3 &emitPoint, const Vec3 &rayDirect, Object *emitObject, bool rayInMedium, int nowDepth, Color &light)
 	{
 		/* 
-		Step 1:	Determine if depth reach max trace depth
+		Step 1:	
+			Determine if depth reach max trace depth
 		*/
 		if (nowDepth <= 0)
 		{
 			return;		// Stop iter
 		}
 
-
 		/*
 		Step 2:
-			Go through each object and calculate intersection
-			find which intersection is most near the emitPoint
-			if there is no intersection, check if intersect with light source
+			Check if intersect with light source can direct illuminate the surface
 		*/
-		Intersection firstIntersection;
-		Light *firstLightSource;
+		Intersection nearestObjectIntersection;
+		Light *nearestLightSource;
 
-		float objDistance = getFirstIntersection(emitPoint, rayVec, isInMedium, castObj, firstIntersection);
-		float lightDistance = getFirstlight(emitPoint, rayVec, firstLightSource);
+		float objDistance = getNearestObject(emitPoint, rayDirect, rayInMedium, emitObject, nearestObjectIntersection);
+		float lightDistance = getNearestLight(emitPoint, rayDirect, nearestLightSource);
 
 		if (lightDistance != NO_INTERSECTION && (objDistance == NO_INTERSECTION || objDistance > lightDistance))
 		{
-			light += firstLightSource->getLightStrength(rayVec, lightDistance, rayVec);
+			light += nearestLightSource->getLightStrength(rayDirect, lightDistance, rayDirect);
 		}
 
 		if (objDistance == NO_INTERSECTION)
@@ -218,16 +216,16 @@ private:
 			Process refraction, calculate refraction ray and recursion trace
 			If total reflection happend, no need to calculate refraction
 		*/
-		Vec3 refractionRay(0, 0, 0);
-		bool totalReflection = firstIntersection.obj->calcRefractionRay(firstIntersection.entryPoint, rayVec, refractionRay, isInMedium);
+		Vec3 refractionRayDirect(0, 0, 0);
+		bool totalReflection = nearestObjectIntersection.obj->calcRefractionRay(nearestObjectIntersection.intersectionPoint, rayDirect, rayInMedium, refractionRayDirect);
 
 		if (!totalReflection)
 		{
 			// Calculate refraction
 			Color refractionColor(0, 0, 0);
-			castTraceRay(firstIntersection.entryPoint, refractionRay, firstIntersection.obj, !isInMedium, nowDepth - 1, refractionColor);
+			castTraceRay(nearestObjectIntersection.intersectionPoint, refractionRayDirect, nearestObjectIntersection.obj, !rayInMedium, nowDepth - 1, refractionColor);
 
-			refractionColor *= firstIntersection.obj->getRefractionRatio(firstIntersection.entryPoint);
+			refractionColor *= nearestObjectIntersection.obj->getRefractionRatio(nearestObjectIntersection.intersectionPoint);
 
 			light += refractionColor;
 		}
@@ -236,24 +234,21 @@ private:
 		Step 4:
 			Calculate all reflection ray and recursion trace
 		*/
-		Vec3 mainReflectionRay(0, 0, 0);
-		firstIntersection.obj->calcReflectionRay(firstIntersection.entryPoint, rayVec, mainReflectionRay);
+		Vec3 mainReflectionRayDirect(0, 0, 0);
+		nearestObjectIntersection.obj->calcReflectionRay(nearestObjectIntersection.intersectionPoint, rayDirect, mainReflectionRayDirect);
 
 		Color reflectionColor(0, 0, 0);
 
 		// Use accurate reflect model, monte-carlo simulation of diffuse
-		deffuseMonteCarlo(firstIntersection, mainReflectionRay, isInMedium, nowDepth, reflectionColor);
+		deffuseMonteCarlo(nearestObjectIntersection, mainReflectionRayDirect, rayInMedium, nowDepth, reflectionColor);
 
 		if (totalReflection)
 		{
-			Color newReflectRatio = firstIntersection.obj->getReflectionRatio(firstIntersection.entryPoint);
-			newReflectRatio += firstIntersection.obj->getRefractionRatio(firstIntersection.entryPoint);
-
-			reflectionColor *= newReflectRatio;
+			reflectionColor *= nearestObjectIntersection.obj->getTotalReflectionRatio(nearestObjectIntersection.intersectionPoint);
 		}
 		else
 		{
-			reflectionColor *= firstIntersection.obj->getReflectionRatio(firstIntersection.entryPoint);
+			reflectionColor *= nearestObjectIntersection.obj->getReflectionRatio(nearestObjectIntersection.intersectionPoint);
 		}
 
 		light += reflectionColor;
@@ -273,10 +268,10 @@ public:
 	}
 
 
-	void trace(Camera camera, size_t traceDepth, Color bgColor, Color ambientLight, int antiAliasScale, UINT32 *bitmap)
+	void trace(Camera camera, size_t traceDepth, Color backgroundColor, Color ambientLight, int antiAliasScale, UINT32 *bitmap)
 	{
-		backgroundColor = bgColor;
-		globalLight = ambientLight;
+		this->backgroundColor = backgroundColor;
+		this->ambientLight = ambientLight;
 
 		// calculate color of each pixel
 #pragma omp parallel
@@ -296,12 +291,11 @@ public:
 
 					Color buffer(0, 0, 0);
 
-					// calculate sub pixel
+					// calculate sub pixel for anti-alias
 					for (int subY = 0; subY < antiAliasScale; ++subY) 
 					{
 						for (int subX = 0; subX < antiAliasScale; ++subX) 
 						{
-							//if(y >= 160 && y <= 200)
 							castTraceRay(camera.getViewPoint(), nowViewRay + diffY * subY + diffX * subX, nullptr, false, traceDepth, buffer);
 						}
 					}
@@ -314,7 +308,7 @@ public:
 	}
 
 private:
-	Color globalLight;
+	Color ambientLight;
 	Color backgroundColor;
 
 	std::vector<std::shared_ptr<Object>> objects;						// store all objects

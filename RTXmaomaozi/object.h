@@ -10,21 +10,21 @@ class Object;
 
 struct Intersection
 {
-	Intersection(Point3 entryPoint, Object *obj) :
-		entryPoint(entryPoint), 
+	Intersection(Point3 intersectionPoint, Object *obj) :
+		intersectionPoint(intersectionPoint), 
 		obj(obj)
 	{
 		;
 	}
 
 	Intersection() :
-		entryPoint(0, 0, 0),
+		intersectionPoint(0, 0, 0),
 		obj(nullptr)
 	{
 		;
 	}
 
-	Point3 entryPoint;
+	Point3 intersectionPoint;
 	Object *obj;
 };
 
@@ -42,12 +42,13 @@ public:
 		diffuseFactor(diffuseFactor)
 	{
 		refractionEtaEntry = 1.0f / refractionEta;
+		totalRefractionRatio = reflectionRatio + refractionRatio;
 	}
 
 	virtual float getIntersection(const Point3 &emitPoint, const Vec3 &rayVec, bool isInMedium) const = 0;
 
 	virtual void calcReflectionRay(const Point3 &reflectionPoint, const Vec3 &rayVec, Vec3 &reflectionRay) const = 0;
-	virtual bool calcRefractionRay(const Point3 &refractionPoint, const Vec3 &rayVec, Vec3 &refractionRay, bool isEntry) const  = 0;
+	virtual bool calcRefractionRay(const Point3 &refractionPoint, const Vec3 &rayVec, bool rayInMedium, Vec3 &refractionRay) const  = 0;
 
 	virtual void getNormVecAt(const Point3 &point, Vec3 &norm) const = 0;
 
@@ -56,9 +57,14 @@ public:
 		return reflectionRatio;
 	}
 
-	virtual Color getRefractionRatio(const Point3 &point) const
+	virtual const Color &getRefractionRatio(const Point3 &point) const
 	{
 		return refractionRatio;
+	}
+
+	virtual const Color &getTotalReflectionRatio(const Point3 &point) const 
+	{
+		return totalRefractionRatio;
 	}
 
 	virtual bool getIsLighting() 
@@ -80,6 +86,7 @@ public:
 protected:
 	Color reflectionRatio;
 	Color refractionRatio;
+	Color totalRefractionRatio;
 	float refractionEta;
 	float refractionEtaEntry;
 	float diffuseFactor;
@@ -136,7 +143,7 @@ public:
 	}
 
 
-	bool calcRefractionRay(const Point3 &refractionPoint, const Vec3 &rayVec, Vec3 &refractionRay, bool isInMedium) const
+	bool calcRefractionRay(const Point3 &refractionPoint, const Vec3 &rayVec, bool isInMedium, Vec3 &refractionRay) const
 	{
 		// copy from Nvidia
 
@@ -249,7 +256,7 @@ public:
 	}
 
 
-	bool calcRefractionRay(const Point3 &refractionPoint, const Vec3 &rayVec, Vec3 &refractionRay, bool isInMedium) const
+	bool calcRefractionRay(const Point3 &refractionPoint, const Vec3 &rayVec, bool isInMedium, Vec3 &refractionRay) const
 	{
 		return false;
 	}
