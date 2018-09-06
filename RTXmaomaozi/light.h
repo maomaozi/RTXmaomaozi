@@ -151,7 +151,9 @@ public:
 
 	virtual float getIntersection(const Point3 &emitPoint, const Vec3 &rayVec) const = 0;
 
-	virtual float sampleRayVec(const Point3 emitPoint, Vec3 &newRayvec) = 0;
+	virtual float sampleRayVec(const Point3  &emitPoint, Vec3 &newRayvec) = 0;
+
+	virtual float getApproxyArea(const Point3  &emitPoint) = 0;
 
 protected:
 	std::default_random_engine e;
@@ -236,7 +238,7 @@ public:
 		return intersectionDist;
 	}
 
-	virtual float sampleRayVec(const Point3 emitPoint, Vec3 &newRayVec)
+	virtual float sampleRayVec(const Point3  &emitPoint, Vec3 &newRayVec)
 	{
 		Vec3 v1 = position - emitPoint;
 	
@@ -256,6 +258,11 @@ public:
 		newRayVec += p;
 
 		return lightDistance;
+	}
+
+	virtual float getApproxyArea(const Point3 &emitPoint) 
+	{
+		return radius;
 	}
 
 private:

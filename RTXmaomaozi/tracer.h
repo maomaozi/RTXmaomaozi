@@ -5,6 +5,9 @@
 #include "light.h"
 #include "camera.h"
 
+
+#define USE_MC_FERLECT 0
+
 class Tracer
 {
 public:
@@ -116,6 +119,72 @@ private:
 	}
 
 
+	void phongLightColour(const Intersection &intersection, const Vec3 &rayVec, bool isInMedium, Color &accumulateLightColor)
+	{
+
+		Vec3 normVector(0, 0, 0);
+		intersection.obj->getNormVecAt(intersection.intersectionPoint, normVector);
+
+		for (auto lightIter = lights.begin(); lightIter != lights.end(); ++lightIter)
+		{
+			Color lightBuffer(0, 0, 0);
+
+			int sampleTime = 0;
+
+			VolumnLight *vLight = dynamic_cast<VolumnLight *>((*lightIter).get());
+			sampleTime = 20;
+
+			Vec3 lightDirection(0, 0, 0);
+
+			Vec3 lightCenterDirection = vLight->position - intersection.intersectionPoint;
+			lightCenterDirection.normalize();
+
+			for (int i = 0; i < sampleTime; ++i)
+			{
+				// Only process direct reflactor(illuminate by light source)
+				float lightSourceDistance;
+
+				if (vLight)
+				{
+					lightSourceDistance = vLight->sampleRayVec(intersection.intersectionPoint, lightDirection);
+				}
+				else
+				{
+					lightDirection = (*lightIter)->position - intersection.intersectionPoint;
+					lightSourceDistance = lightDirection.length();
+				}
+
+				lightDirection.normalize();
+
+				int shadowState = isShadow(lightDirection, lightSourceDistance, intersection, isInMedium);
+
+				if (shadowState == 0 || shadowState == -1)
+				{
+					float angleDiffuseCos = normVector * lightDirection;
+					float angleReflectCos = powf(rayVec * lightCenterDirection, 29);
+					angleReflectCos = powf(angleReflectCos, 29);
+
+					if (angleDiffuseCos < 0.0f) angleDiffuseCos = -angleDiffuseCos;
+					if (angleReflectCos < 0.0f) angleReflectCos = 0.0f;
+
+					Color lightColor = (*lightIter)->getLightStrength(lightDirection, lightSourceDistance, normVector);
+
+					// come from diffuse
+					lightBuffer += lightColor * angleDiffuseCos * intersection.obj->getDiffuseFactor();
+
+					// come from real reflector
+					lightBuffer += lightColor * angleReflectCos * (1 - intersection.obj->getDiffuseFactor());
+				}
+			}
+
+			lightBuffer /= sampleTime;
+			accumulateLightColor += lightBuffer;
+		}
+
+		accumulateLightColor += ambientLight;
+	}
+
+
 	void deffuseMonteCarlo(const Intersection &intersection, const Vec3 &rayVec,  bool isInMedium, int nowDepth, Color &reflectionColor)
 	{
 		static std::default_random_engine e;
@@ -124,12 +193,13 @@ private:
 		Color diffuseColor(0, 0, 0);
 		Vec3 p(0, 0, 0);
 		Vec3 norm(0, 0, 0);
+
 		intersection.obj->getNormVecAt(intersection.intersectionPoint, norm);
 
 		float ratio = acosf(-2.0f * intersection.obj->getDiffuseFactor() + 1.0f) / PI;
 
 		int counter = 0;
-		for (int i = 0; i < 10 * ratio; ++i)
+		for (int i = 0; i < 200 * ratio; ++i)
 		{
 			// vector create referer to https://math.stackexchange.com/questions/2464998/random-vector-with-fixed-angle
 
@@ -196,19 +266,32 @@ private:
 			Check if intersect with light source can direct illuminate the surface
 		*/
 		Intersection nearestObjectIntersection;
+		float objDistance = getNearestObject(emitPoint, rayDirect, rayInMedium, emitObject, nearestObjectIntersection);
+
+		//Check if intersect with light source can direct illuminate the surface
 		Light *nearestLightSource;
 
-		float objDistance = getNearestObject(emitPoint, rayDirect, rayInMedium, emitObject, nearestObjectIntersection);
+
 		float lightDistance = getNearestLight(emitPoint, rayDirect, nearestLightSource);
 
-		if (lightDistance != NO_INTERSECTION && (objDistance == NO_INTERSECTION || objDistance > lightDistance))
+		if ((USE_MC_FERLECT || emitObject == nullptr) && lightDistance != NO_INTERSECTION &&
+			(objDistance == NO_INTERSECTION || objDistance > lightDistance))
 		{
-			light += nearestLightSource->getLightStrength(rayDirect, lightDistance, rayDirect);
+			//light += nearestLightSource->getLightStrength(rayDirect, lightDistance, rayDirect);
 		}
+
 
 		if (objDistance == NO_INTERSECTION)
 		{
-			return;
+			if (emitObject == nullptr)
+			{
+				light += backgroundColor;
+				return;
+			}
+			else
+			{
+				return;
+			}
 		}
 
 		/*
@@ -239,8 +322,19 @@ private:
 
 		Color reflectionColor(0, 0, 0);
 
-		// Use accurate reflect model, monte-carlo simulation of diffuse
-		deffuseMonteCarlo(nearestObjectIntersection, mainReflectionRayDirect, rayInMedium, nowDepth, reflectionColor);
+		if (USE_MC_FERLECT && nowDepth >= traceDepth)
+		{
+			// Use accurate reflect model, monte-carlo simulation of diffuse
+			deffuseMonteCarlo(nearestObjectIntersection, mainReflectionRayDirect, rayInMedium, nowDepth, reflectionColor);
+		}
+		else
+		{
+			castTraceRay(nearestObjectIntersection.intersectionPoint, mainReflectionRayDirect, nearestObjectIntersection.obj, rayInMedium, nowDepth - 1, reflectionColor);
+			// if object is diffuse, direct reflector will have less weight
+			reflectionColor *= (1 - nearestObjectIntersection.obj->getDiffuseFactor());
+
+			phongLightColour(nearestObjectIntersection, mainReflectionRayDirect, rayInMedium, reflectionColor);
+		}
 
 		if (totalReflection)
 		{
@@ -249,6 +343,23 @@ private:
 		else
 		{
 			reflectionColor *= nearestObjectIntersection.obj->getReflectionRatio(nearestObjectIntersection.intersectionPoint);
+
+			
+			if (USE_MC_FERLECT && nowDepth >= traceDepth)
+			{
+				;
+			}
+			else 
+			{
+				if (rayInMedium)
+				{
+					Color refractLightSource(0, 0, 0);
+					phongLightColour(nearestObjectIntersection, refractionRayDirect, rayInMedium, refractLightSource);
+
+					refractLightSource *= nearestObjectIntersection.obj->getRefractionRatio(nearestObjectIntersection.intersectionPoint);
+					light += refractLightSource;
+				}
+			}
 		}
 
 		light += reflectionColor;
@@ -272,6 +383,7 @@ public:
 	{
 		this->backgroundColor = backgroundColor;
 		this->ambientLight = ambientLight;
+		this->traceDepth = traceDepth;
 
 		// calculate color of each pixel
 #pragma omp parallel
@@ -308,6 +420,8 @@ public:
 	}
 
 private:
+	int traceDepth;
+
 	Color ambientLight;
 	Color backgroundColor;
 
