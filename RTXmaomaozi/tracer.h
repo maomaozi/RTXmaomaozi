@@ -6,7 +6,7 @@
 #include "camera.h"
 
 
-#define USE_MC_FERLECT 0
+#define USE_MC_REFLECT 0
 
 class Tracer
 {
@@ -274,7 +274,7 @@ private:
 
 		float lightDistance = getNearestLight(emitPoint, rayDirect, nearestLightSource);
 
-		if ((USE_MC_FERLECT || emitObject == nullptr) && lightDistance != NO_INTERSECTION &&
+		if ((USE_MC_REFLECT || emitObject == nullptr) && lightDistance != NO_INTERSECTION &&
 			(objDistance == NO_INTERSECTION || objDistance > lightDistance))
 		{
 			//light += nearestLightSource->getLightStrength(rayDirect, lightDistance, rayDirect);
@@ -322,7 +322,7 @@ private:
 
 		Color reflectionColor(0, 0, 0);
 
-		if (USE_MC_FERLECT && nowDepth >= traceDepth)
+		if (USE_MC_REFLECT && nowDepth >= traceDepth)
 		{
 			// Use accurate reflect model, monte-carlo simulation of diffuse
 			deffuseMonteCarlo(nearestObjectIntersection, mainReflectionRayDirect, rayInMedium, nowDepth, reflectionColor);
@@ -345,7 +345,7 @@ private:
 			reflectionColor *= nearestObjectIntersection.obj->getReflectionRatio(nearestObjectIntersection.intersectionPoint);
 
 			
-			if (USE_MC_FERLECT && nowDepth >= traceDepth)
+			if (USE_MC_REFLECT && nowDepth >= traceDepth)
 			{
 				;
 			}
