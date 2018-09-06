@@ -10,21 +10,21 @@ class Object;
 
 struct Intersection
 {
-	Intersection(Point3 entryPoint, Object *obj) :
-		entryPoint(entryPoint), 
+	Intersection(Point3 intersectionPoint, Object *obj) :
+		intersectionPoint(intersectionPoint), 
 		obj(obj)
 	{
 		;
 	}
 
 	Intersection() :
-		entryPoint(0, 0, 0),
+		intersectionPoint(0, 0, 0),
 		obj(nullptr)
 	{
 		;
 	}
 
-	Point3 entryPoint;
+	Point3 intersectionPoint;
 	Object *obj;
 };
 
@@ -42,12 +42,13 @@ public:
 		diffuseFactor(diffuseFactor)
 	{
 		refractionEtaEntry = 1.0f / refractionEta;
+		totalRefractionRatio = reflectionRatio + refractionRatio;
 	}
 
 	virtual float getIntersection(const Point3 &emitPoint, const Vec3 &rayVec, bool isInMedium) const = 0;
 
 	virtual void calcReflectionRay(const Point3 &reflectionPoint, const Vec3 &rayVec, Vec3 &reflectionRay) const = 0;
-	virtual bool calcRefractionRay(const Point3 &refractionPoint, const Vec3 &rayVec, Vec3 &refractionRay, bool isEntry) const  = 0;
+	virtual bool calcRefractionRay(const Point3 &refractionPoint, const Vec3 &rayVec, bool rayInMedium, Vec3 &refractionRay) const  = 0;
 
 	virtual void getNormVecAt(const Point3 &point, Vec3 &norm) const = 0;
 
@@ -56,9 +57,14 @@ public:
 		return reflectionRatio;
 	}
 
-	virtual Color getRefractionRatio(const Point3 &point) const
+	virtual const Color &getRefractionRatio(const Point3 &point) const
 	{
 		return refractionRatio;
+	}
+
+	virtual const Color &getTotalReflectionRatio(const Point3 &point) const 
+	{
+		return totalRefractionRatio;
 	}
 
 	virtual bool getIsLighting() 
@@ -80,6 +86,7 @@ public:
 protected:
 	Color reflectionRatio;
 	Color refractionRatio;
+	Color totalRefractionRatio;
 	float refractionEta;
 	float refractionEtaEntry;
 	float diffuseFactor;
@@ -136,7 +143,7 @@ public:
 	}
 
 
-	bool calcRefractionRay(const Point3 &refractionPoint, const Vec3 &rayVec, Vec3 &refractionRay, bool isInMedium) const
+	bool calcRefractionRay(const Point3 &refractionPoint, const Vec3 &rayVec, bool isInMedium, Vec3 &refractionRay) const
 	{
 		// copy from Nvidia
 
@@ -249,7 +256,7 @@ public:
 	}
 
 
-	bool calcRefractionRay(const Point3 &refractionPoint, const Vec3 &rayVec, Vec3 &refractionRay, bool isInMedium) const
+	bool calcRefractionRay(const Point3 &refractionPoint, const Vec3 &rayVec, bool isInMedium, Vec3 &refractionRay) const
 	{
 		return false;
 	}
@@ -288,4 +295,93 @@ public:
 private:
 	Color blackColor = Color(0.2, 0.2, 0.2);
 	Color whiteColor = Color(0.9, 0.9, 0.9);
+};
+
+
+class Triangle : public Object
+{
+public:
+
+	Triangle(const Point3 &pointA, const Point3 &pointB, const Point3 &pointC, const Color &reflectionRatio, const Color &refractionRatio, float refractionEta, float diffuseFactor) :
+		Object(reflectionRatio, refractionRatio, refractionEta, diffuseFactor), 
+		pointA(pointA), pointB(pointB), pointC(pointC), 
+		pointAB(pointB - pointA), pointAC(pointC - pointA),
+		normVec(pointAB.xmul(pointAC))
+	{
+		normVec.normalize();
+	}
+
+
+	void getNormVecAt(const Point3 &point, Vec3 &norm) const
+	{
+		norm = normVec;
+	}
+
+
+	float getIntersection(const Point3 &emitPoint, const Vec3 &rayVec, bool isInMedium) const
+	{
+		/*
+		Moller-Trumbore Algorithm
+		*/
+
+		Vec3 P = rayVec.xmul(pointAC);
+
+		float determinant = pointAB * P;
+
+		Vec3 T(determinant > 0 ? emitPoint - pointA : pointA - emitPoint);
+
+		determinant = fabs(determinant);
+
+		if (determinant < EPSILON) return NO_INTERSECTION;
+
+		float u = T * P;
+
+		if (u < 0.0f || u > determinant) return NO_INTERSECTION;
+
+		Vec3 Q = T.xmul(pointAB);
+
+		float v = rayVec * Q;
+		if (v < 0.0f || u + v > determinant) return NO_INTERSECTION;
+
+		float t = pointAC * Q / determinant;
+
+		if (t < 10 * EPSILON) return NO_INTERSECTION;
+
+		return t;
+	}
+
+	const Color &getReflectionRatio(const Point3 &point) const
+	{
+		return reflectionRatio;
+	}
+
+
+	void calcReflectionRay(const Point3 &reflectionPoint, const Vec3 &rayVec, Vec3 &reflectionRay) const
+	{
+		// R = I - 2 * (I * N) * N
+		reflectionRay = rayVec - normVec * 2 * (rayVec * normVec);
+	}
+
+
+	bool calcRefractionRay(const Point3 &refractionPoint, const Vec3 &rayVec, bool isInMedium, Vec3 &refractionRay) const
+	{
+		float eta = isInMedium ? refractionEta : refractionEtaEntry;
+
+
+		float cosi = -rayVec * normVec;
+		float cost2 = 1.0f - eta * eta * (1.0f - cosi * cosi);
+		refractionRay = rayVec * eta + normVec * (eta * fabsf(cosi) - sqrt(fabs(cost2))) * (cosi < 0.0f ? -1.0f : 1.0f);
+
+		return cost2 <= 0;
+	}
+
+protected:
+	Point3 pointA;
+	Point3 pointB;
+	Point3 pointC;
+
+	Vec3 pointAB;
+	Vec3 pointAC;
+
+	Vec3 normVec;
 };

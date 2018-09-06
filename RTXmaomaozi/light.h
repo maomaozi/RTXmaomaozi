@@ -1,6 +1,7 @@
 #pragma once
 #include "vec.h"
 
+#define NO_INTERSECTION -1.0f
 
 struct Color
 {
@@ -148,7 +149,11 @@ public:
 		return true;
 	}
 
-	virtual float sampleRayVec(const Point3 emitPoint, Vec3 &newRayvec) = 0;
+	virtual float getIntersection(const Point3 &emitPoint, const Vec3 &rayVec) const = 0;
+
+	virtual float sampleRayVec(const Point3  &emitPoint, Vec3 &newRayvec) = 0;
+
+	virtual float getApproxyArea(const Point3  &emitPoint) = 0;
 
 protected:
 	std::default_random_engine e;
@@ -214,7 +219,26 @@ public:
 		;
 	}
 
-	virtual float sampleRayVec(const Point3 emitPoint, Vec3 &newRayVec)
+	virtual float getIntersection(const Point3 &emitPoint, const Vec3 &rayVec) const
+	{
+
+		Vec3 sphereDist = position - emitPoint;
+
+		float sphereDistProjectOnRay = rayVec * sphereDist;
+
+		if (sphereDistProjectOnRay < 0) return NO_INTERSECTION;
+
+		float sphereDistSquare = sphereDist * sphereDist;
+		float sphereRayDistSquare = sphereDistSquare - sphereDistProjectOnRay * sphereDistProjectOnRay;
+
+		if (sphereRayDistSquare >= radiusSquare) return NO_INTERSECTION;
+
+		float intersectionDist = sphereDistProjectOnRay - sqrtf(radiusSquare - sphereRayDistSquare);
+
+		return intersectionDist;
+	}
+
+	virtual float sampleRayVec(const Point3  &emitPoint, Vec3 &newRayVec)
 	{
 		Vec3 v1 = position - emitPoint;
 	
@@ -234,6 +258,11 @@ public:
 		newRayVec += p;
 
 		return lightDistance;
+	}
+
+	virtual float getApproxyArea(const Point3 &emitPoint) 
+	{
+		return radius;
 	}
 
 private:
@@ -295,18 +324,18 @@ class Object;
 
 struct Ray 
 {
-	Ray() : emitPoint(0,0,0), rayVec(0,0,0)
+	Ray() : emitPoint(0,0,0), rayDirect(0,0,0)
 	{
 		;
 	}
 
-	Ray(const Point3 &emitPoint, const Vec3 &rayVec, Object* castObj) : 
-		emitPoint(emitPoint), rayVec(rayVec), castObj(castObj)
+	Ray(const Point3 &emitPoint, const Vec3 &rayVec, Object* castObj, bool isInMedium) :
+		emitPoint(emitPoint), rayDirect(rayVec), emitObject(emitObject)
 	{
 		;
 	}
 
 	Point3 emitPoint;
-	Vec3 rayVec;
-	Object *castObj;
+	Vec3 rayDirect;
+	Object *emitObject;
 };
