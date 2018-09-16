@@ -1,115 +1,8 @@
 #pragma once
 #include "vec.h"
+#include "color.h"
 
 #define NO_INTERSECTION -1.0f
-
-struct Color
-{
-	Color() : r(0), g(0), b(0)
-	{
-		;
-	}
-
-	Color(float r, float g, float b) : r(r), g(g), b(b)
-	{
-		;
-	}
-
-	Color operator+(const Color &rhs) const
-	{
-		return std::move(Color(r + rhs.r, g + rhs.g, b + rhs.b));
-	}
-
-	Color operator-(const Color &rhs) const
-	{
-		return std::move(Color(r - rhs.r, g - rhs.g, b - rhs.b));
-	}
-
-	Color operator*(const Color &rhs) const
-	{
-		return std::move(Color(r * rhs.r, g * rhs.g, b * rhs.b));
-	}
-
-	Color operator/(const Color &rhs) const
-	{
-		return std::move(Color(r / rhs.r, g / rhs.g, b / rhs.b));
-	}
-
-
-	Color operator+(float rhs) const
-	{
-		return std::move(Color(r + rhs, g + rhs, b + rhs));
-	}
-
-
-	Color operator-(float rhs) const
-	{
-		return std::move(Color(r - rhs, g - rhs, b - rhs));
-	}
-
-
-	Color operator*(float rhs) const
-	{
-		return std::move(Color (r * rhs, g * rhs, b * rhs));
-	}
-
-
-	Color operator/(float rhs) const
-	{
-		return std::move(Color((r / rhs), (g / rhs), (b / rhs)));
-	}
-
-
-	void operator/=(float rhs)
-	{
-		r /= rhs;
-		g /= rhs;
-		b /= rhs;
-	}
-
-
-	void operator/=(const Color &rhs)
-	{
-		r /= rhs.r;
-		g /= rhs.g;
-		b /= rhs.b;
-	}
-
-
-	UINT32 getColor() const
-	{
-		return ((UINT32)max(min(r, 255.0f), 0.0f) << 16) | ((UINT32)max(min(g, 255.0f), 0.0f) << 8) | (UINT32)max(min(b, 255.0f), 0.0f);
-	}
-
-
-	void operator+=(const Color &rhs)
-	{
-		r = r + rhs.r;
-		g = g + rhs.g;
-		b = b + rhs.b;
-	}
-
-
-	void operator*=(float rhs)
-	{
-		r = r * rhs;
-		g = g * rhs;
-		b = b * rhs;
-	}
-
-
-	void operator*=(const Color &rhs)
-	{
-		r *= rhs.r;
-		g *= rhs.g;
-		b *= rhs.b;
-	}
-
-
-	float r;
-	float g;
-	float b;
-};
 
 
 class Light 
@@ -132,6 +25,7 @@ public:
 	float strength;
 	Color color;
 };
+
 
 class VolumnLight : public Light
 {
@@ -228,14 +122,11 @@ public:
 
 		if (sphereDistProjectOnRay < 0) return NO_INTERSECTION;
 
-		float sphereDistSquare = sphereDist * sphereDist;
-		float sphereRayDistSquare = sphereDistSquare - sphereDistProjectOnRay * sphereDistProjectOnRay;
+		float sphereRayDistSquare = sphereDist * sphereDist - sphereDistProjectOnRay * sphereDistProjectOnRay;
 
 		if (sphereRayDistSquare >= radiusSquare) return NO_INTERSECTION;
 
-		float intersectionDist = sphereDistProjectOnRay - sqrtf(radiusSquare - sphereRayDistSquare);
-
-		return intersectionDist;
+		return sphereDistProjectOnRay - sqrtf(radiusSquare - sphereRayDistSquare);
 	}
 
 	virtual float sampleRayVec(const Point3  &emitPoint, Vec3 &newRayVec)
@@ -244,7 +135,7 @@ public:
 	
 		float lightDistance = v1.length();
 
-		float targetCosAngle = sqrtf(lightDistance * lightDistance - radiusSquare * ((u(e) + 1.0f) / 2)) / lightDistance;
+		float targetCosAngle = sqrtf(lightDistance * lightDistance - radiusSquare * ((u(e) + 1.0f) / 2.0f)) / lightDistance;
 
 		Vec3 p(u(e), u(e), u(e));
 
@@ -262,9 +153,7 @@ public:
 
 	virtual float getSampleRatio(const Point3 &emitPoint)
 	{
-		Vec3 v1 = position - emitPoint;
-
-		float lightDistance = v1.length();
+		float lightDistance = (position - emitPoint).length();
 
 		float targetAngle = acosf(sqrtf(lightDistance * lightDistance - radiusSquare) / lightDistance);
 

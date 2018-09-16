@@ -133,7 +133,7 @@ private:
 
 			VolumnLight *vLight = static_cast<VolumnLight *>((*lightIter).get());
 
-			sampleTime = 100;
+			sampleTime = 20;
 
 			Vec3 lightDirection(0, 0, 0);
 
@@ -153,20 +153,11 @@ private:
 
 				if (shadowState == 0 || shadowState == -1)
 				{
-					float angleDiffuseCos = normVector * lightDirection;
-					float angleReflectCos = powf(rayVec * lightCenterDirection, 29);
-					angleReflectCos = powf(angleReflectCos, 29);
-
-					if (angleDiffuseCos < 0.0f) angleDiffuseCos = -angleDiffuseCos;
-					if (angleReflectCos < 0.0f) angleReflectCos = 0.0f;
-
 					Color lightColor = (*lightIter)->getLightStrength(lightDirection, lightSourceDistance, normVector);
 
-					// come from diffuse
-					lightBuffer += lightColor * angleDiffuseCos * intersection.obj->getDiffuseFactor();
+					// diffuse
+					lightBuffer += lightColor * intersection.obj->getDiffuseFactor();
 
-					// come from real reflector
-					lightBuffer += lightColor * angleReflectCos * (1 - intersection.obj->getDiffuseFactor());
 				}
 			}
 			lightBuffer *= vLight->getSampleRatio(intersection.intersectionPoint);
