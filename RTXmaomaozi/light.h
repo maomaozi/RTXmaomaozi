@@ -153,7 +153,7 @@ public:
 
 	virtual float sampleRayVec(const Point3  &emitPoint, Vec3 &newRayvec) = 0;
 
-	virtual float getApproxyArea(const Point3  &emitPoint) = 0;
+	virtual float getSampleRatio(const Point3  &emitPoint) = 0;
 
 protected:
 	std::default_random_engine e;
@@ -244,7 +244,7 @@ public:
 	
 		float lightDistance = v1.length();
 
-		float targetCosAngle = lightDistance / sqrtf(lightDistance * lightDistance + radiusSquare * ((u(e) + 1.0f) / 2));
+		float targetCosAngle = sqrtf(lightDistance * lightDistance - radiusSquare * ((u(e) + 1.0f) / 2)) / lightDistance;
 
 		Vec3 p(u(e), u(e), u(e));
 
@@ -260,9 +260,15 @@ public:
 		return lightDistance;
 	}
 
-	virtual float getApproxyArea(const Point3 &emitPoint) 
+	virtual float getSampleRatio(const Point3 &emitPoint)
 	{
-		return radius;
+		Vec3 v1 = position - emitPoint;
+
+		float lightDistance = v1.length();
+
+		float targetAngle = acosf(sqrtf(lightDistance * lightDistance - radiusSquare) / lightDistance);
+
+		return 4.0f * targetAngle * targetAngle / (PI * PI);
 	}
 
 private:
