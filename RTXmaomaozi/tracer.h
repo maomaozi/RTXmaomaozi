@@ -7,6 +7,7 @@
 
 
 #define USE_MC_REFLECT
+#define FASTER_RENDER
 
 class Tracer
 {
@@ -329,48 +330,128 @@ public:
 	}
 
 
-	void trace(Camera camera, size_t traceDepth, Color backgroundColor, Color ambientLight, int antiAliasScale, UINT32 *bitmap)
+	void renderPixel(int x, int y, const Camera &camera, UINT32 *pixel)
+	{
+		Vec3 nowViewRay = camera.getViewRay(x, y);
+		Vec3 nextViewRayX = camera.getViewRay(x + 1, y);
+		Vec3 nextViewRayY = camera.getViewRay(x, y + 1);
+
+
+		Vec3 diffX = (nextViewRayX - nowViewRay) / (float)antiAliasScale;
+		Vec3 diffY = (nextViewRayY - nowViewRay) / (float)antiAliasScale;
+
+		Color buffer(0, 0, 0);
+
+		// calculate sub pixel for anti-alias
+		for (int subY = 0; subY < antiAliasScale; ++subY)
+		{
+			for (int subX = 0; subX < antiAliasScale; ++subX)
+			{
+				castTraceRay(camera.getViewPoint(), nowViewRay + diffY * subY + diffX * subX, nullptr, false, traceDepth, buffer);
+			}
+		}
+
+		buffer /= (float)(antiAliasScale * antiAliasScale);
+		*pixel = buffer.getColor();
+	}
+
+
+	void trace(const Camera &camera, size_t traceDepth, const Color &backgroundColor, const Color &ambientLight, int antiAliasScale, UINT32 *bitmap)
 	{
 		this->backgroundColor = backgroundColor;
 		this->ambientLight = ambientLight;
 		this->traceDepth = traceDepth;
+		this->antiAliasScale = antiAliasScale;
 
 		// calculate color of each pixel
+
+		int w = camera.getWidth();
+		int h = camera.getHeight();
+
 #pragma omp parallel
 		{
-#pragma omp for nowait schedule(static, 1)
-			for (int y = 0; y < (int)camera.getHeight(); ++y)
+
+#pragma omp for nowait schedule(static, 2)
+#ifndef FASTER_RENDER
+
+			for (int y = 0; y < h; ++y)
 			{
-				for (int x = 0; x < (int)camera.getWidth(); ++x)
+				for (int x = 0; x < w; ++x)
 				{
-					Vec3 nowViewRay = camera.getViewRay(x, y);
-					Vec3 nextViewRayX = camera.getViewRay(x + 1, y);
-					Vec3 nextViewRayY = camera.getViewRay(x, y + 1);
-
-
-					Vec3 diffX = (nextViewRayX - nowViewRay) / (float)antiAliasScale;
-					Vec3 diffY = (nextViewRayY - nowViewRay) / (float)antiAliasScale;
-
-					Color buffer(0, 0, 0);
-
-					// calculate sub pixel for anti-alias
-					for (int subY = 0; subY < antiAliasScale; ++subY) 
-					{
-						for (int subX = 0; subX < antiAliasScale; ++subX) 
-						{
-							castTraceRay(camera.getViewPoint(), nowViewRay + diffY * subY + diffX * subX, nullptr, false, traceDepth, buffer);
-						}
-					}
-
-					buffer /= (float)(antiAliasScale * antiAliasScale);
-					bitmap[x + y * (int)camera.getWidth()] = buffer.getColor();
+					renderPixel(x, y, camera, &bitmap[x + y * w]);
 				}
 			}
+#else
+			for (int y = 0; y < h; y += 4)
+			{
+				for (int x = 0; x < w; x += 4)
+				{
+					renderPixel(x, y, camera, &bitmap[x + y * w]);
+				}
+			}
+
+			for (int space = 2; space >= 1; --space)
+			{
+#pragma omp barrier
+#pragma omp for nowait schedule(static, 2)
+				for (int y = 0; y < h - space - 1; y += space)
+				{
+					for (int x = 0; x < w - space - 1; x += space)
+					{
+
+						int colorLhs = 0x000000;
+						int colorRhs = 0xffffff;
+
+						if (y % (space * 2) == 0 && x % (space * 2) != 0)
+						{
+							colorLhs = bitmap[(x - space) + y * w];
+							colorRhs = bitmap[(x + space) + y * w];
+						}
+						else if (y % (space * 2) != 0 && x % (space * 2) == 0)
+						{
+							colorLhs = bitmap[x + (y - space) * w];
+							colorRhs = bitmap[x + (y + space) * w];
+						}
+						else if (y % (space * 2) != 0 && x % (space * 2) != 0)
+						{
+							//colorLhs = bitmap[(x - space) + y * w];
+							//colorRhs = bitmap[x + (y - space) * w];
+						}
+						else
+						{
+							continue;
+						}
+
+						int lr = (colorLhs & 0xff0000) >> 16;
+						int lg = (colorLhs & 0x00ff00) >> 8;
+						int lb = (colorLhs & 0x0000ff);
+
+						int rr = (colorRhs & 0xff0000) >> 16;
+						int rg = (colorRhs & 0x00ff00) >> 8;
+						int rb = (colorRhs & 0x0000ff);
+
+						int rDiff = abs(lr - rr);
+						int gDiff = abs(lg - rg);
+						int bDiff = abs(lb - rb);
+
+						if (rDiff + gDiff + bDiff < 5)
+						{
+							bitmap[x + y * w] = Color((lr + rr) / 2, (lg + rg) / 2, (lb + rb) / 2).getColor();
+						}
+						else
+						{
+							renderPixel(x, y, camera, &bitmap[x + y * w]);
+						}
+					}
+				}
+			}
+#endif
 		}
 	}
 
 private:
 	int traceDepth;
+	int antiAliasScale;
 
 	Color ambientLight;
 	Color backgroundColor;

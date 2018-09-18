@@ -87,13 +87,16 @@ public:
 		viewPoint = screenCenter + norm * screenDist;
 	}
 
-	Point3 rasterization(float x, float y)
+	Point3 rasterization(float x, float y) const
 	{
-		auto a = cameraPosition + _horizonVec;
-		return cameraPosition + _verticalVec * y  + _horizonVec * x;
+		Point3 result = cameraPosition;
+		result += _verticalVec * y;
+		result += _horizonVec * x;
+
+		return result;
 	}
 
-	Vec3 getViewRay(float x, float y)
+	Vec3 getViewRay(float x, float y) const
 	{
 		Vec3 viewRay = rasterization(x, y) - viewPoint;
 
@@ -102,17 +105,17 @@ public:
 		return viewRay;
 	}
 
-	Point3 getViewPoint()
+	const Point3 &getViewPoint() const
 	{
 		return viewPoint;
 	}
 
-	float getWidth()
+	float getWidth() const
 	{
 		return width;
 	}
 
-	float getHeight()
+	float getHeight() const
 	{
 		return height;
 	}
