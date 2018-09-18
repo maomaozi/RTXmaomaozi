@@ -148,6 +148,8 @@ public:
 		p *= sqrtf(1.0f - targetCosAngle * targetCosAngle);
 		newRayVec += p;
 
+		newRayVec.normalize();
+
 		return lightDistance;
 	}
 

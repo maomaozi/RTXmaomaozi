@@ -97,7 +97,8 @@ private:
 		for (auto lightIter = lights.begin(); lightIter != lights.end(); ++lightIter)
 		{
 			// Get all intersection and then calculate distance
-			VolumnLight *vLight = dynamic_cast<VolumnLight *>((*lightIter).get());
+			VolumnLight *vLight = static_cast<VolumnLight *>((*lightIter).get());
+
 			float intersectionDistance = vLight->getIntersection(emitPoint, rayVec);
 
 			if (intersectionDistance != NO_INTERSECTION && intersectionDistance < firstIntersectionDistance)
@@ -119,7 +120,7 @@ private:
 	}
 
 
-	void phongLightColour(const Intersection &intersection, const Vec3 &rayVec, bool isInMedium, Color &accumulateLightColor)
+	void directLightColour(const Intersection &intersection, const Vec3 &rayVec, bool isInMedium, Color &accumulateLightColor)
 	{
 
 		Vec3 normVector(0, 0, 0);
@@ -129,11 +130,9 @@ private:
 		{
 			Color lightBuffer(0, 0, 0);
 
-			int sampleTime = 0;
-
 			VolumnLight *vLight = static_cast<VolumnLight *>((*lightIter).get());
 
-			sampleTime = 20;
+			int sampleTime = 20;
 
 			Vec3 lightDirection(0, 0, 0);
 
@@ -143,20 +142,16 @@ private:
 			for (int i = 0; i < sampleTime; ++i)
 			{
 				// Only process direct reflactor(illuminate by light source)
-				float lightSourceDistance;
-
-				lightSourceDistance = vLight->sampleRayVec(intersection.intersectionPoint, lightDirection);
-
-				lightDirection.normalize();
+				float lightSourceDistance = vLight->sampleRayVec(intersection.intersectionPoint, lightDirection);
 
 				int shadowState = isShadow(lightDirection, lightSourceDistance, intersection, isInMedium);
 
 				if (shadowState == 0 || shadowState == -1)
 				{
 					Color lightColor = (*lightIter)->getLightStrength(lightDirection, lightSourceDistance, normVector);
+					lightColor *= intersection.obj->getDiffuseFactor();
 
-					// diffuse
-					lightBuffer += lightColor * intersection.obj->getDiffuseFactor();
+					lightBuffer += lightColor;
 
 				}
 			}
@@ -181,6 +176,9 @@ private:
 
 		intersection.obj->getNormVecAt(intersection.intersectionPoint, norm);
 
+		float rayVecDot = rayVec * rayVec;
+		float rayVecLength = rayVec.length();
+
 		int sampleTimes = 1000 * acosf(-2.0f * intersection.obj->getDiffuseFactor() + 1.0f) / PI;
 
 		for (int i = 0; i < sampleTimes; ++i)
@@ -188,34 +186,28 @@ private:
 			// vector create referer to https://math.stackexchange.com/questions/2464998/random-vector-with-fixed-angle
 
 			// use new c++11 random engine here
-			float targetCosAngle = 1 + (u(e) - 1) * intersection.obj->getDiffuseFactor();
+			float targetCosAngle = 1.0f + (u(e) - 1.0f) * intersection.obj->getDiffuseFactor();
 
 			p.x = u(e);
 			p.y = u(e);
 			p.z = u(e);
 
-			p -= rayVec * ((p * rayVec) / (rayVec * rayVec));
+			p -= rayVec * ((p * rayVec) / rayVecDot);
 
 			p /= p.length();
-			p *= rayVec.length();
+			p *= rayVecLength;
 
 			Vec3 v = rayVec * targetCosAngle;
 			p *= sqrtf(1.0f - targetCosAngle * targetCosAngle);
 			v += p;
 
-			if (v * norm <= 0)
-			{
-				--i;
-				continue;
-			}
+			/*if (v * norm <= 0) continue;*/
 
-			diffuseColor.r = diffuseColor.g = diffuseColor.b = 0.0f;
 			castTraceRay(intersection.intersectionPoint, v, intersection.obj, isInMedium, nowDepth - 1, diffuseColor);
-
-			diffuseColor /= sampleTimes;
-
-			reflectionColor += diffuseColor;
 		}
+
+		diffuseColor /= sampleTimes;
+		reflectionColor += diffuseColor;
 	}
 
 
@@ -300,12 +292,14 @@ private:
 		else
 #endif
 		{
+			// The direct reflect part
 			castTraceRay(nearestObjectIntersection.intersectionPoint, mainReflectionRayDirect, nearestObjectIntersection.obj, rayInMedium, nowDepth - 1, reflectionColor);
-			// if object is diffuse, direct reflector will have less weight
+
+			// If object is diffuse, direct reflector will have less weight
 			reflectionColor *= (1 - nearestObjectIntersection.obj->getDiffuseFactor());
 
-			phongLightColour(nearestObjectIntersection, mainReflectionRayDirect, rayInMedium, reflectionColor);
-
+			// The diffuse part (only diffuse light to reduce calculation)
+			directLightColour(nearestObjectIntersection, mainReflectionRayDirect, rayInMedium, reflectionColor);
 		}
 
 
