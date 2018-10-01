@@ -135,9 +135,16 @@ public:
 	
 		float lightDistance = v1.length();
 
-		float targetCosAngle = sqrtf(lightDistance * lightDistance - radiusSquare * ((u(e) + 1.0f) / 2.0f)) / lightDistance;
+		//float targetCosAngle = sqrtf(lightDistance * lightDistance - radiusSquare * ((u(e) + 1.0f) / 2.0f)) / lightDistance;
+		float targetCosAngle = sqrtf(lightDistance * lightDistance - radiusSquare * ((float)rand() / (float)RAND_MAX)) / lightDistance;
 
-		Vec3 p(u(e), u(e), u(e));
+		//Vec3 p(u(e), u(e), u(e));
+		Vec3 p
+		(
+			(float)rand() / (float)RAND_MAX * 2.0f - 1.0f, 
+			(float)rand() / (float)RAND_MAX * 2.0f - 1.0f,
+			(float)rand() / (float)RAND_MAX * 2.0f - 1.0f
+		);
 
 		p -= v1 * ((p * v1) / (v1 * v1));
 

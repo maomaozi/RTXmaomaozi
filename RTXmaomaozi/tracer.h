@@ -133,7 +133,7 @@ private:
 
 			VolumnLight *vLight = static_cast<VolumnLight *>((*lightIter).get());
 
-			int sampleTime = 20;
+			int sampleTime = 10;
 
 			Vec3 lightDirection(0, 0, 0);
 
@@ -180,34 +180,46 @@ private:
 		float rayVecDot = rayVec * rayVec;
 		float rayVecLength = rayVec.length();
 
-		int sampleTimes = 1000 * acosf(-2.0f * intersection.obj->getDiffuseFactor() + 1.0f) / PI;
+		//float sampleRatio = acosf(-2.0f * intersection.obj->getDiffuseFactor() + 1.0f) / PI;
+		//int sampleTimes = 1000 * sampleRatio * sampleRatio;
 
-		for (int i = 0; i < sampleTimes; ++i)
+		int angleSampleTimes = 60;
+		int directSampleTimes = 20;
+
+		for (int i = 0; i < angleSampleTimes; ++i)
 		{
-			// vector create referer to https://math.stackexchange.com/questions/2464998/random-vector-with-fixed-angle
+			float targetCosAngle = 1.0f - (((float)i / (float)angleSampleTimes) * intersection.obj->getDiffuseFactor()) * 2.0f;
 
-			// use new c++11 random engine here
-			float targetCosAngle = 1.0f + (u(e) - 1.0f) * intersection.obj->getDiffuseFactor();
+			for (int j = 0; j < directSampleTimes; ++j)
+			{
+				for (int k = 0; k < directSampleTimes; ++k)
+				{
+					for (int l = 0; l < directSampleTimes; ++l)
+					{
+						// vector create referer to https://math.stackexchange.com/questions/2464998/random-vector-with-fixed-angle
 
-			p.x = u(e);
-			p.y = u(e);
-			p.z = u(e);
+						p.x = (float)j / (float)directSampleTimes * 2.0f - 1.0f;
+						p.y = (float)k / (float)directSampleTimes * 2.0f - 1.0f;
+						p.z = (float)l / (float)directSampleTimes * 2.0f - 1.0f;
 
-			p -= rayVec * ((p * rayVec) / rayVecDot);
+						p -= rayVec * ((p * rayVec) / rayVecDot);
 
-			p /= p.length();
-			p *= rayVecLength;
+						p /= p.length();
+						p *= rayVecLength;
 
-			Vec3 v = rayVec * targetCosAngle;
-			p *= sqrtf(1.0f - targetCosAngle * targetCosAngle);
-			v += p;
+						Vec3 v = rayVec * targetCosAngle;
+						p *= sqrtf(1.0f - targetCosAngle * targetCosAngle);
+						v += p;
 
-			/*if (v * norm <= 0) continue;*/
+						if (v * norm <= 0) continue;
 
-			castTraceRay(intersection.intersectionPoint, v, intersection.obj, isInMedium, nowDepth - 1, diffuseColor);
+						castTraceRay(intersection.intersectionPoint, v, intersection.obj, isInMedium, nowDepth - 1, diffuseColor);
+					}
+				}
+			}
 		}
 
-		diffuseColor /= sampleTimes;
+		diffuseColor /= angleSampleTimes * directSampleTimes * directSampleTimes * directSampleTimes;
 		reflectionColor += diffuseColor;
 	}
 
@@ -285,7 +297,7 @@ private:
 		Color reflectionColor(0, 0, 0);
 
 #ifdef USE_MC_REFLECT
-		if (nowDepth >= traceDepth)
+		if (nowDepth == traceDepth)
 		{
 			// Use accurate monte-carlo reflect model simulation of diffuse
 			deffuseMonteCarlo(nearestObjectIntersection, mainReflectionRayDirect, rayInMedium, nowDepth, reflectionColor);
@@ -434,7 +446,7 @@ public:
 						int gDiff = abs(lg - rg);
 						int bDiff = abs(lb - rb);
 
-						if (rDiff + gDiff + bDiff < 5)
+						if (rDiff + gDiff + bDiff < 10)
 						{
 							bitmap[x + y * w] = Color((lr + rr) / 2, (lg + rg) / 2, (lb + rb) / 2).getColor();
 						}
