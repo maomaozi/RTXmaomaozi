@@ -45,9 +45,6 @@
 
 ### Demo Scene:
 
-![Demo](http://121.49.97.197:10101/maozi/RTXmaomaozi/raw/e2a966bc7ab9df1c5e2e8b14561f2dbf8344162a/demo.png "Demo")
+![Demo](https://github.com/maomaozi/RTXmaomaozi/blob/master/demo.png?raw=true "Demo")
 
-![Demo2](http://121.49.97.197:10101/maozi/RTXmaomaozi/raw/f997811963cadd276eed63c174fb16c7cde13810/demo2.png "Demo2")
-
-#### 漫反射原始着色图
-![Demo3](http://121.49.97.197:10101/maozi/RTXmaomaozi/raw/e3fb27ad364fb4a8c2dca448c7f2b781c32056c3/%E6%97%A0%E6%A0%87%E9%A2%98.png "Demo3")
+![Demo2](https://github.com/maomaozi/RTXmaomaozi/blob/master/demo2.png?raw=true "Demo2")
