@@ -51,5 +51,5 @@
 
 Donate me
 ```
-BTC **1MyWJjx97SKcz2aehEHjJPz6c4RNgUmRrh**
+BTC 1MyWJjx97SKcz2aehEHjJPz6c4RNgUmRrh
 ```
