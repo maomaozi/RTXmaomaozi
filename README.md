@@ -48,3 +48,8 @@
 ![Demo](https://github.com/maomaozi/RTXmaomaozi/blob/master/demo.png?raw=true "Demo")
 
 ![Demo2](https://github.com/maomaozi/RTXmaomaozi/blob/master/demo2.png?raw=true "Demo2")
+
+Donate me
+```
+BTC **1MyWJjx97SKcz2aehEHjJPz6c4RNgUmRrh**
+```
