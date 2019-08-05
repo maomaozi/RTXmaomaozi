@@ -166,7 +166,7 @@ public:
 
 		float targetAngle = acosf(sqrtf(lightDistance * lightDistance - radiusSquare) / lightDistance);
 
-		return 4.0f * targetAngle * targetAngle / (PI * PI);
+		return targetAngle / PI;
 	}
 
 private:

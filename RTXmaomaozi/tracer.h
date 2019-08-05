@@ -150,13 +150,13 @@ private:
 				if (shadowState == 0 || shadowState == -1)
 				{
 					Color lightColor = (*lightIter)->getLightStrength(lightDirection, lightSourceDistance, normVector);
-					lightColor *= intersection.obj->getDiffuseFactor();
+					lightColor *= intersection.obj->getDiffuseFactor() * normVector.dot(lightDirection);
 
 					lightBuffer += lightColor;
 
 				}
 			}
-			lightBuffer *= vLight->getSampleRatio(intersection.intersectionPoint);
+			//lightBuffer *= vLight->getSampleRatio(intersection.intersectionPoint);
 			lightBuffer /= sampleTime;
 
 			accumulateLightColor += lightBuffer;
@@ -175,52 +175,39 @@ private:
 		Vec3 p(0, 0, 0);
 		Vec3 norm(0, 0, 0);
 
-		intersection.obj->getNormVecAt(intersection.intersectionPoint, norm);
+		for (int i = 0; i < 100; ++i) {
+			intersection.obj->getNormVecAt(intersection.intersectionPoint, norm);
 
-		float rayVecDot = rayVec * rayVec;
-		float rayVecLength = rayVec.length();
+			float rayVecDot = rayVec * rayVec;
+			float rayVecLength = rayVec.length();
 
-		//float sampleRatio = acosf(-2.0f * intersection.obj->getDiffuseFactor() + 1.0f) / PI;
-		//int sampleTimes = 1000 * sampleRatio * sampleRatio;
+			float targetCosAngle = 1.0f - (((float)rand() / (float)RAND_MAX ) / 2.0f * intersection.obj->getDiffuseFactor());
 
-		int angleSampleTimes = 60;
-		int directSampleTimes = 20;
+			// vector create referer to https://math.stackexchange.com/questions/2464998/random-vector-with-fixed-angle
 
-		for (int i = 0; i < angleSampleTimes; ++i)
-		{
-			float targetCosAngle = 1.0f - (((float)i / (float)angleSampleTimes) * intersection.obj->getDiffuseFactor()) * 2.0f;
+			//p.x = u(e);
+			//p.y = u(e);
+			//p.z = u(e);
 
-			for (int j = 0; j < directSampleTimes; ++j)
-			{
-				for (int k = 0; k < directSampleTimes; ++k)
-				{
-					for (int l = 0; l < directSampleTimes; ++l)
-					{
-						// vector create referer to https://math.stackexchange.com/questions/2464998/random-vector-with-fixed-angle
+			p.x = (float)rand() / (float)RAND_MAX * 2.0f - 1.0f;
+			p.y = (float)rand() / (float)RAND_MAX * 2.0f - 1.0f;
+			p.z = (float)rand() / (float)RAND_MAX * 2.0f - 1.0f;
 
-						p.x = (float)j / (float)directSampleTimes * 2.0f - 1.0f;
-						p.y = (float)k / (float)directSampleTimes * 2.0f - 1.0f;
-						p.z = (float)l / (float)directSampleTimes * 2.0f - 1.0f;
 
-						p -= rayVec * ((p * rayVec) / rayVecDot);
+			p -= rayVec * ((p * rayVec) / rayVecDot);
 
-						p /= p.length();
-						p *= rayVecLength;
+			p /= p.length();
+			p *= rayVecLength;
 
-						Vec3 v = rayVec * targetCosAngle;
-						p *= sqrtf(1.0f - targetCosAngle * targetCosAngle);
-						v += p;
+			Vec3 v = rayVec * targetCosAngle;
+			p *= sqrtf(1.0f - targetCosAngle * targetCosAngle);
+			v += p;
 
-						if (v * norm <= 0) continue;
+			castTraceRay(intersection.intersectionPoint, v, intersection.obj, isInMedium, nowDepth - 1, diffuseColor);
 
-						castTraceRay(intersection.intersectionPoint, v, intersection.obj, isInMedium, nowDepth - 1, diffuseColor);
-					}
-				}
-			}
 		}
 
-		diffuseColor /= angleSampleTimes * directSampleTimes * directSampleTimes * directSampleTimes;
-		reflectionColor += diffuseColor;
+		reflectionColor += diffuseColor / 100.0f;
 	}
 
 
@@ -257,7 +244,7 @@ private:
 		// See though background
 		if (objDistance == NO_INTERSECTION)
 		{
-			if (emitObject == nullptr && lightDistance == NO_INTERSECTION)
+			if (lightDistance == NO_INTERSECTION)
 			{
 				light += backgroundColor;
 				return;
@@ -311,9 +298,10 @@ private:
 			// If object is diffuse, direct reflector will have less weight
 			reflectionColor *= (1 - nearestObjectIntersection.obj->getDiffuseFactor());
 
-			// The diffuse part (only diffuse light to reduce calculation)
-			directLightColour(nearestObjectIntersection, mainReflectionRayDirect, rayInMedium, reflectionColor);
 		}
+
+		// The diffuse part (only diffuse light to reduce calculation)
+		directLightColour(nearestObjectIntersection, mainReflectionRayDirect, rayInMedium, reflectionColor);
 
 
 		if (totalReflection)
