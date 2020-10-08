@@ -205,14 +205,10 @@ public:
 public:
 	Color getLightStrength(const Vec3 &lightDirection, float distance, const Vec3 &objNorm) const
 	{
-		float offsetCosAngle = -lightDirection * direct;
-
-		float decay = powf(offsetCosAngle, 1 / decayRatio);
-
-		if (decay < 0) decay = 0;
+		float offsetCosAngle = (-lightDirection * direct + 1) / 2.0f;
 
 		Color c = color * strength;
-		c *= decay;
+		c *= powf(offsetCosAngle, 1 / decayRatio);
 
 		return std::move(c);
 	}
@@ -225,21 +221,3 @@ private:
 
 
 class Object;
-
-struct Ray 
-{
-	Ray() : emitPoint(0,0,0), rayDirect(0,0,0)
-	{
-		;
-	}
-
-	Ray(const Point3 &emitPoint, const Vec3 &rayVec, Object* castObj, bool isInMedium) :
-		emitPoint(emitPoint), rayDirect(rayVec), emitObject(emitObject)
-	{
-		;
-	}
-
-	Point3 emitPoint;
-	Vec3 rayDirect;
-	Object *emitObject;
-};

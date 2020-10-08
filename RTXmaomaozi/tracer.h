@@ -175,7 +175,7 @@ private:
 		Vec3 p(0, 0, 0);
 		Vec3 norm(0, 0, 0);
 
-		for (int i = 0; i < 100; ++i) {
+		for (int i = 0; i < 10; ++i) {
 			intersection.obj->getNormVecAt(intersection.intersectionPoint, norm);
 
 			float rayVecDot = rayVec * rayVec;
@@ -207,7 +207,7 @@ private:
 
 		}
 
-		reflectionColor += diffuseColor / 100.0f;
+		reflectionColor += diffuseColor / 10;
 	}
 
 
