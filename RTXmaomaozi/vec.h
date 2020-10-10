@@ -18,6 +18,16 @@
 	   Angle is define as conter-clockwise ( While one axis point to right and one point to sky)
 */
 
+float mySqrt(float x)
+{
+	float a = x;
+	unsigned int i = *(unsigned int *)&x;
+	i = (i + 0x3f76cf62) >> 1;
+	x = *(float *)&i;
+	x = (x + a / x) * 0.5;
+	return x;
+}
+
 struct Struct3 
 {
 #ifdef USE_SSE_AVX
@@ -147,16 +157,6 @@ struct Vec3 : public Struct3
 	{
 		float len = length();
 
-		/*if(len == 0)
-		{
-			return Vec3(1, 0, 0);
-		}
-
-		len += EPSILON;
-
-		return Vec3(x / len, y / len, z / len);
-		*/
-
 		if (len != 0)
 		{
 			len += EPSILON;
@@ -170,12 +170,7 @@ struct Vec3 : public Struct3
 
 	float length() const
 	{
-#ifdef USE_SSE_AVX
-		return sqrtf(powf(x, 2) + powf(y, 2) + powf(z, 2));
-#else
 		return sqrtf(x * x + y * y + z * z);
-#endif
-		
 	}
 
 
@@ -195,13 +190,7 @@ struct Vec3 : public Struct3
 			return tmp > 0 ? 0 : PI;
 		}
 
-		float angle = acosf(tmp);
-
-		return angle;
-
-		//Vec3 axis = this->xmul(vec2);
-
-		//return axis * Vec3(0.0f, 0.0f, 1.0f) > 0.0f ? angle : 2 * PI - angle;
+		return acosf(tmp);
 	}
 
 
@@ -269,7 +258,7 @@ struct Point3 : public Struct3
 
 	float distance(const Point3 &rhs)
 	{
-		return sqrtf(powf(x - rhs.x, 2) + powf(y - rhs.y, 2) + powf(z - rhs.z, 2));
+		return sqrtf((x - rhs.x) * (x - rhs.x) + (y - rhs.y) * (y - rhs.y) + (z - rhs.z) * (z - rhs.z));
 	}
 
 

@@ -168,26 +168,23 @@ private:
 
 	void deffuseMonteCarlo(const Intersection &intersection, const Vec3 &rayVec,  bool isInMedium, int nowDepth, Color &reflectionColor)
 	{
-		static std::default_random_engine e;
-		static std::uniform_real_distribution<float> u(-1, 1);
 
 		Color diffuseColor(0, 0, 0);
 		Vec3 p(0, 0, 0);
 		Vec3 norm(0, 0, 0);
 
-		for (int i = 0; i < 10; ++i) {
-			intersection.obj->getNormVecAt(intersection.intersectionPoint, norm);
+		intersection.obj->getNormVecAt(intersection.intersectionPoint, norm);
 
-			float rayVecDot = rayVec * rayVec;
-			float rayVecLength = rayVec.length();
+		float rayVecDot = rayVec * rayVec;
+		float rayVecLength = rayVec.length();
+
+		int sampleTime = 30;
+
+		for (int i = 0; i < sampleTime; ++i) {
 
 			float targetCosAngle = 1.0f - (((float)rand() / (float)RAND_MAX ) / 2.0f * intersection.obj->getDiffuseFactor());
 
 			// vector create referer to https://math.stackexchange.com/questions/2464998/random-vector-with-fixed-angle
-
-			//p.x = u(e);
-			//p.y = u(e);
-			//p.z = u(e);
 
 			p.x = (float)rand() / (float)RAND_MAX * 2.0f - 1.0f;
 			p.y = (float)rand() / (float)RAND_MAX * 2.0f - 1.0f;
@@ -203,11 +200,11 @@ private:
 			p *= sqrtf(1.0f - targetCosAngle * targetCosAngle);
 			v += p;
 
-			castTraceRay(intersection.intersectionPoint, v, intersection.obj, isInMedium, nowDepth - 1, diffuseColor);
+			castTraceRay(intersection.intersectionPoint, v, intersection.obj, isInMedium, nowDepth - 2, diffuseColor);
 
 		}
 
-		reflectionColor += diffuseColor / 10;
+		reflectionColor += diffuseColor / sampleTime;
 	}
 
 
@@ -284,7 +281,7 @@ private:
 		Color reflectionColor(0, 0, 0);
 
 #ifdef USE_MC_REFLECT
-		if (nowDepth == traceDepth)
+		if (nowDepth >= traceDepth - 5 && (emitObject == NULL || emitObject->getDiffuseFactor() <= 0.01f) && nearestObjectIntersection.obj->getDiffuseFactor() >= 0.01f)
 		{
 			// Use accurate monte-carlo reflect model simulation of diffuse
 			deffuseMonteCarlo(nearestObjectIntersection, mainReflectionRayDirect, rayInMedium, nowDepth, reflectionColor);
@@ -402,17 +399,17 @@ public:
 						int colorLhs = 0x000000;
 						int colorRhs = 0xffffff;
 
-						if (y % (space * 2) == 0 && x % (space * 2) != 0)
+						if (y % (space << 1) == 0 && x % (space << 1) != 0)
 						{
 							colorLhs = bitmap[(x - space) + y * w];
 							colorRhs = bitmap[(x + space) + y * w];
 						}
-						else if (y % (space * 2) != 0 && x % (space * 2) == 0)
+						else if (y % (space << 1) != 0 && x % (space << 1) == 0)
 						{
 							colorLhs = bitmap[x + (y - space) * w];
 							colorRhs = bitmap[x + (y + space) * w];
 						}
-						else if (y % (space * 2) != 0 && x % (space * 2) != 0)
+						else if (y % (space << 1) != 0 && x % (space << 1) != 0)
 						{
 							//colorLhs = bitmap[(x - space) + y * w];
 							//colorRhs = bitmap[x + (y - space) * w];
@@ -436,7 +433,7 @@ public:
 
 						if (rDiff + gDiff + bDiff < 10)
 						{
-							bitmap[x + y * w] = Color((lr + rr) / 2, (lg + rg) / 2, (lb + rb) / 2).getColor();
+							bitmap[x + y * w] = Color((lr + rr) >> 1, (lg + rg) >> 1, (lb + rb) >> 1).getColor();
 						}
 						else
 						{
