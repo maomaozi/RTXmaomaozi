@@ -133,7 +133,7 @@ private:
 
 			VolumnLight *vLight = static_cast<VolumnLight *>((*lightIter).get());
 
-			int sampleTime = 10;
+			int sampleTime = 1;
 
 			Vec3 lightDirection(0, 0, 0);
 
@@ -156,7 +156,6 @@ private:
 
 				}
 			}
-			//lightBuffer *= vLight->getSampleRatio(intersection.intersectionPoint);
 			lightBuffer /= sampleTime;
 
 			accumulateLightColor += lightBuffer;
@@ -178,7 +177,7 @@ private:
 		float rayVecDot = rayVec * rayVec;
 		float rayVecLength = rayVec.length();
 
-		int sampleTime = 30;
+		int sampleTime = 1;
 
 		for (int i = 0; i < sampleTime; ++i) {
 

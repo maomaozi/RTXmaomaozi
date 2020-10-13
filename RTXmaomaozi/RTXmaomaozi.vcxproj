@@ -149,9 +149,11 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClInclude Include="aabb.h" />
     <ClInclude Include="camera.h" />
     <ClInclude Include="color.h" />
     <ClInclude Include="config.h" />
+    <ClInclude Include="kdTree.h" />
     <ClInclude Include="light.h" />
     <ClInclude Include="object.h" />
     <ClInclude Include="tracer.h" />
