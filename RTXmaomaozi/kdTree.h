@@ -13,11 +13,11 @@ public:
 	~KdTree();
 
 	void insert(const AABB* box);
-	void ray_query(const Vec3 &point, const Vec3 &direct, std::unordered_set<const AABB *, AABBhash> &result);
+	void ray_query(const Point3 &point, const Vec3 &direct, std::unordered_set<const AABB *, AABBhash> &result);
 
 private:
 	bool is_leaf();
-	bool level_intersect(const Vec3 &point, const Vec3 &direct);
+	bool level_intersect(const Point3 &point, const Vec3 &direct);
 	void split();
 	void insert_to_child(const AABB *box);
 
@@ -62,7 +62,7 @@ inline void KdTree::insert(const AABB *box)
 	}
 }
 
-inline void KdTree::ray_query(const Vec3 &point, const Vec3 &direct, std::unordered_set<const AABB *, AABBhash> &result)
+inline void KdTree::ray_query(const Point3 &point, const Vec3 &direct, std::unordered_set<const AABB *, AABBhash> &result)
 {
 	if (level_intersect(point, direct)) 
 	{
@@ -84,7 +84,7 @@ inline bool KdTree::is_leaf()
 	return l_child == nullptr;
 }
 
-inline bool KdTree::level_intersect(const Vec3 &point, const Vec3 &direct)
+inline bool KdTree::level_intersect(const Point3 &point, const Vec3 &direct)
 {
 	float t_min = 0.0f;
 	float t_max = FLT_MAX;

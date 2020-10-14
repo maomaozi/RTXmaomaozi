@@ -1,6 +1,7 @@
 #pragma once
 
 #include "light.h"
+#include "aabb.h"
 
 #define NO_INTERSECTION -1.0f
 
@@ -46,6 +47,8 @@ public:
 	}
 
 	virtual float getIntersection(const Point3 &emitPoint, const Vec3 &rayVec, bool isInMedium) const = 0;
+
+	virtual void calcAABB(AABB &result) const = 0;
 
 	virtual void calcReflectionRay(const Point3 &reflectionPoint, const Vec3 &rayVec, Vec3 &reflectionRay) const = 0;
 	virtual bool calcRefractionRay(const Point3 &refractionPoint, const Vec3 &rayVec, bool rayInMedium, Vec3 &refractionRay) const  = 0;
@@ -143,6 +146,12 @@ public:
 	}
 
 
+	void calcAABB(AABB &result) const {
+		Vec3 v_r(radius, radius, radius);
+		result.set_top_left(center - v_r);
+		result.set_down_right(center + v_r);
+	}
+
 	bool calcRefractionRay(const Point3 &refractionPoint, const Vec3 &rayVec, bool isInMedium, Vec3 &refractionRay) const
 	{
 		// copy from Nvidia
@@ -227,6 +236,10 @@ public:
 	void getNormVecAt(const Point3 &point, Vec3 &norm) const
 	{
 		norm = normVec;
+	}
+
+	void calcAABB(AABB &result) const {
+		// cannot calc for plan
 	}
 
 
@@ -315,6 +328,24 @@ public:
 	void getNormVecAt(const Point3 &point, Vec3 &norm) const
 	{
 		norm = normVec;
+	}
+
+	void calcAABB(AABB &result) const {
+
+		result.set_top_left(
+		Point3(
+			min(pointA.x, min(pointB.x, pointC.x)),
+			min(pointA.y, min(pointB.y, pointC.y)),
+			min(pointA.z, min(pointB.z, pointC.z))
+
+		));
+
+		result.set_down_right(
+		Point3(
+			max(pointA.x, max(pointB.x, pointC.x)),
+			max(pointA.y, max(pointB.y, pointC.y)),
+			max(pointA.z, max(pointB.z, pointC.z))
+		));
 	}
 
 

@@ -6,29 +6,33 @@ class AABB
 {
 public:
 	AABB();
-	AABB(const Vec3 &top_left, Vec3 &down_right);
+	AABB(const Point3 &top_left, Point3 &down_right);
 	~AABB();
 
 	bool intersection(const AABB *box);
 
 	void split(float value, int axis, AABB &lhs, AABB &rhs);
 
-	const Vec3 &get_top_left() const;
+	const Point3 &get_top_left() const;
 
-	const Vec3 &get_down_right() const;
+	const Point3 &get_down_right() const;
+
+	void set_top_left(const Point3 &vec);
+
+	void set_down_right(const Point3 &vec);
 
 	int operator==(AABB const * const &lhs) const;
 
 private:
-	Vec3 top_left;
-	Vec3 down_right;
+	Point3 top_left;
+	Point3 down_right;
 };
 
 inline AABB::AABB() : top_left({ 0,0,0 }), down_right({ 0, 0, 0 })
 {
 }
 
-AABB::AABB(const Vec3 &top_left, Vec3 &down_right) : top_left(top_left), down_right(down_right)
+AABB::AABB(const Point3 &top_left, Point3 &down_right) : top_left(top_left), down_right(down_right)
 {
 }
 
@@ -53,10 +57,10 @@ inline bool AABB::intersection(const AABB *box)
 
 inline void AABB::split(float value, int axis, AABB &lhs, AABB &rhs)
 {
-	Vec3 new_down_right = Vec3(down_right);
+	Point3 new_down_right = Point3(down_right);
 	new_down_right[axis] = value;
 
-	Vec3 new_top_left = Vec3(top_left);
+	Point3 new_top_left = Point3(top_left);
 	new_top_left[axis] = value;
 
 	lhs.top_left = top_left;
@@ -66,14 +70,24 @@ inline void AABB::split(float value, int axis, AABB &lhs, AABB &rhs)
 	rhs.down_right = down_right;
 }
 
-inline const Vec3 & AABB::get_top_left() const
+inline const Point3 & AABB::get_top_left() const
 {
 	return top_left;
 }
 
-inline const Vec3 & AABB::get_down_right() const
+inline const Point3 & AABB::get_down_right() const
 {
 	return down_right;
+}
+
+inline void AABB::set_top_left(const Point3 & vec)
+{
+	top_left = vec;
+}
+
+inline void AABB::set_down_right(const Point3 & vec)
+{
+	down_right = vec;
 }
 
 inline int AABB::operator==(AABB const * const &lhs) const

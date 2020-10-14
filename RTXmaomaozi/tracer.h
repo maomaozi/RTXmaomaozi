@@ -177,7 +177,7 @@ private:
 		float rayVecDot = rayVec * rayVec;
 		float rayVecLength = rayVec.length();
 
-		int sampleTime = 1;
+		int sampleTime = 4;
 
 		for (int i = 0; i < sampleTime; ++i) {
 
