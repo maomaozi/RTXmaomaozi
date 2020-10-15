@@ -4,10 +4,12 @@
 #include "object.h"
 #include "light.h"
 #include "camera.h"
+#include "scence.h"
 
 
-#define USE_MC_REFLECT
+//#define USE_MC_REFLECT
 #define FASTER_RENDER
+//#define USE_KD_TREE
 
 class Tracer
 {
@@ -18,7 +20,7 @@ public:
 
 private:
 
-	int isShadow(const Vec3 &lightDirection, float lightDistance, const Intersection &intersectin, bool isInMedium)
+	int isShadow(const Vec3 &lightDirection, float lightDistance, const Intersection &intersection, bool isInMedium)
 	{
 		// three state:
 		// 0. no shadowed
@@ -30,15 +32,23 @@ private:
 
 		int result = 0;	// no shadowed
 
-		for (auto objIter = objects.begin(); objIter != objects.end(); ++objIter)
+#ifdef USE_KD_TREE
+		thread_local static std::unordered_set<void *> filter_objects;
+		scence->ray_query_objects(intersection.intersectionPoint, lightDirection, filter_objects);
+
+		for (auto objIter : filter_objects)
+#else
+		for (auto objIter : scence->getAllObjects())
+#endif // USE_KD_TREE
 		{
 			// if any object block this light source, in medium will not block by medium itself 
-			float distance = (*objIter)->getIntersection(intersectin.intersectionPoint, lightDirection, isInMedium);
+			Object *obj = (Object *)objIter;
+			float distance = obj->getIntersection(intersection.intersectionPoint, lightDirection, isInMedium);
 
 			if (distance != NO_INTERSECTION && distance < lightDistance)
 			{
 				// block by some object front fo light source
-				if (isInMedium && intersectin.obj == (*objIter).get())
+				if (isInMedium && intersection.obj == objIter)
 				{
 					result = -1;
 				}
@@ -61,19 +71,27 @@ private:
 		float firstIntersectionDistance = FLT_MAX;		// The most near intersection distance
 		bool isFound = false;							// If we got any intersection
 
-		for (auto objIter = objects.begin(); objIter != objects.end(); ++objIter)
+#ifdef USE_KD_TREE
+		thread_local static std::unordered_set<void *> filter_objects;
+		scence->ray_query_objects(emitPoint, rayVec, filter_objects);
+		for (auto objIter : filter_objects)
+#else
+		for (auto objIter : scence->getAllObjects())
+#endif
 		{
 			// Get all intersection and then calculate distance
 
-			float intersectionDistance = (*objIter)->getIntersection(emitPoint, rayVec, isInMedium);
+			Object *obj = (Object *)objIter;
 
-			if (intersectionDistance > 0 && intersectionDistance < firstIntersectionDistance && (isInMedium || castObj != objIter->get()))
+			float intersectionDistance = obj->getIntersection(emitPoint, rayVec, isInMedium);
+
+			if (intersectionDistance > 0 && intersectionDistance < firstIntersectionDistance && (isInMedium || castObj != objIter))
 			{
 				isFound = true;
 				firstIntersectionDistance = intersectionDistance;
 
 				firstIntersection.intersectionPoint = emitPoint + rayVec * intersectionDistance;
-				firstIntersection.obj = objIter->get();
+				firstIntersection.obj = obj;
 			}
 		}
 
@@ -88,24 +106,29 @@ private:
 	}
 
 
-	float getNearestLight(const Point3 &emitPoint, const Vec3 &rayVec, Light *&light)
+	float getNearestLight(const Point3 &emitPoint, const Vec3 &rayVec, VolumnLight *&light)
 	{
 		// rayDirect is always normalized
 
 		float firstIntersectionDistance = FLT_MAX;		// The most near intersection distance
 		bool isFound = false;							// If we got any intersection
 
-		for (auto lightIter = lights.begin(); lightIter != lights.end(); ++lightIter)
+#ifdef USE_KD_TREE
+		thread_local static std::unordered_set<void *> filter_lights;
+		scence->ray_query_vlights(emitPoint, rayVec, filter_lights);
+
+		for (auto lightIter : filter_lights)
+#else
+		for (auto vLight : scence->getAllLights())
+#endif
 		{
 			// Get all intersection and then calculate distance
-			VolumnLight *vLight = static_cast<VolumnLight *>((*lightIter).get());
-
 			float intersectionDistance = vLight->getIntersection(emitPoint, rayVec);
 
 			if (intersectionDistance != NO_INTERSECTION && intersectionDistance < firstIntersectionDistance)
 			{
 				isFound = true;
-				light = (*lightIter).get();
+				light = vLight;
 				firstIntersectionDistance = intersectionDistance;
 			}
 		}
@@ -127,11 +150,11 @@ private:
 		Vec3 normVector(0, 0, 0);
 		intersection.obj->getNormVecAt(intersection.intersectionPoint, normVector);
 
-		for (auto lightIter = lights.begin(); lightIter != lights.end(); ++lightIter)
+		for (auto lightIter : scence->getAllLights())
 		{
 			Color lightBuffer(0, 0, 0);
 
-			VolumnLight *vLight = static_cast<VolumnLight *>((*lightIter).get());
+			VolumnLight *vLight =(VolumnLight *)lightIter;
 
 			int sampleTime = 1;
 
@@ -143,16 +166,17 @@ private:
 			for (int i = 0; i < sampleTime; ++i)
 			{
 				// Only process direct reflactor(illuminate by light source)
-				float lightSourceDistance = vLight->sampleRayVec(intersection.intersectionPoint, lightDirection);
+				float ratio;
+				float lightSourceDistance = vLight->sampleRayVec(intersection.intersectionPoint, lightDirection, ratio);
 
 				int shadowState = isShadow(lightDirection, lightSourceDistance, intersection, isInMedium);
 
-				if (shadowState == 0 || shadowState == -1)
+				if (shadowState <= 0 )
 				{
-					Color lightColor = (*lightIter)->getLightStrength(lightDirection, lightSourceDistance, normVector);
+					Color lightColor = vLight->getLightStrength(lightDirection, lightSourceDistance, normVector);
 					lightColor *= intersection.obj->getDiffuseFactor() * normVector.dot(lightDirection);
 
-					lightBuffer += lightColor;
+					lightBuffer += lightColor * ratio;
 
 				}
 			}
@@ -165,9 +189,23 @@ private:
 	}
 
 
+	inline void xorshift32(uint32_t &state)
+	{
+		state ^= state << 13;
+		state ^= state >> 17;
+		state ^= state << 5;
+	}
+
+	inline uint32_t fastrand(uint32_t &state) {
+		state = (214013 * state + 2531011);
+		return state;
+	}
+
+
+
 	void deffuseMonteCarlo(const Intersection &intersection, const Vec3 &rayVec,  bool isInMedium, int nowDepth, Color &reflectionColor)
 	{
-
+		
 		Color diffuseColor(0, 0, 0);
 		Vec3 p(0, 0, 0);
 		Vec3 norm(0, 0, 0);
@@ -177,17 +215,18 @@ private:
 		float rayVecDot = rayVec * rayVec;
 		float rayVecLength = rayVec.length();
 
-		int sampleTime = 4;
+		int sampleTime = 5;
+		
+		uint32_t state = rand();
 
 		for (int i = 0; i < sampleTime; ++i) {
-
-			float targetCosAngle = 1.0f - (((float)rand() / (float)RAND_MAX ) / 2.0f * intersection.obj->getDiffuseFactor());
+			float targetCosAngle = 1.0f - (fastrand(state) / 2147483647.5f) * intersection.obj->getDiffuseFactor();
 
 			// vector create referer to https://math.stackexchange.com/questions/2464998/random-vector-with-fixed-angle
 
-			p.x = (float)rand() / (float)RAND_MAX * 2.0f - 1.0f;
-			p.y = (float)rand() / (float)RAND_MAX * 2.0f - 1.0f;
-			p.z = (float)rand() / (float)RAND_MAX * 2.0f - 1.0f;
+			p.x = 1.0f - fastrand(state) / 2147483647.5f;
+			p.y = 1.0f - fastrand(state) / 2147483647.5f;
+			p.z = 1.0f - fastrand(state) / 2147483647.5f;
 
 
 			p -= rayVec * ((p * rayVec) / rayVecDot);
@@ -226,8 +265,9 @@ private:
 		Intersection nearestObjectIntersection;
 		float objDistance = getNearestObject(emitPoint, rayDirect, rayInMedium, emitObject, nearestObjectIntersection);
 
+
 		//Check if intersect with light source can direct illuminate the surface
-		Light *nearestLightSource;
+		VolumnLight *nearestLightSource;
 
 		float lightDistance = getNearestLight(emitPoint, rayDirect, nearestLightSource);
 
@@ -256,18 +296,22 @@ private:
 			Process refraction, calculate refraction ray and recursion trace
 			If total reflection happend, no need to calculate refraction
 		*/
-		Vec3 refractionRayDirect(0, 0, 0);
-		bool totalReflection = nearestObjectIntersection.obj->calcRefractionRay(nearestObjectIntersection.intersectionPoint, rayDirect, rayInMedium, refractionRayDirect);
+		bool totalReflection = false;
 
-		if (!totalReflection)
-		{
-			// Calculate refraction
-			Color refractionColor(0, 0, 0);
-			castTraceRay(nearestObjectIntersection.intersectionPoint, refractionRayDirect, nearestObjectIntersection.obj, !rayInMedium, nowDepth - 1, refractionColor);
+		if (nearestObjectIntersection.obj->getRefractionRatio(nearestObjectIntersection.intersectionPoint).getStrength() >= 0.1f) {
+			Vec3 refractionRayDirect(0, 0, 0);
+			totalReflection = nearestObjectIntersection.obj->calcRefractionRay(nearestObjectIntersection.intersectionPoint, rayDirect, rayInMedium, refractionRayDirect);
 
-			refractionColor *= nearestObjectIntersection.obj->getRefractionRatio(nearestObjectIntersection.intersectionPoint);
+			if (!totalReflection)
+			{
+				// Calculate refraction
+				Color refractionColor(0, 0, 0);
+				castTraceRay(nearestObjectIntersection.intersectionPoint, refractionRayDirect, nearestObjectIntersection.obj, !rayInMedium, nowDepth - 1, refractionColor);
 
-			light += refractionColor;
+				refractionColor *= nearestObjectIntersection.obj->getRefractionRatio(nearestObjectIntersection.intersectionPoint);
+
+				light += refractionColor;
+			}
 		}
 
 		/*
@@ -314,17 +358,10 @@ private:
 
 public:
 
-	void addObject(Object *obj) 
+	void setSence(Scence *newScence)
 	{
-		objects.emplace_back(obj);
+		scence = newScence;
 	}
-
-
-	void addLightSource(Light *light)
-	{
-		lights.emplace_back(light);
-	}
-
 
 	void renderPixel(int x, int y, const Camera &camera, UINT32 *pixel)
 	{
@@ -452,8 +489,7 @@ private:
 	Color ambientLight;
 	Color backgroundColor;
 
-	std::vector<std::shared_ptr<Object>> objects;						// store all objects
-	std::vector<std::shared_ptr<Light>> lights;							// store all light
+	Scence *scence;
 };
 
 Tracer::Tracer()

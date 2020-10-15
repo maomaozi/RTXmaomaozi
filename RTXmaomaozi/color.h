@@ -103,6 +103,11 @@ struct Color
 		return ((UINT32)max(min(r, 255.0f), 0.0f) << 16) | ((UINT32)max(min(g, 255.0f), 0.0f) << 8) | (UINT32)max(min(b, 255.0f), 0.0f);
 	}
 
+	UINT32 getStrength() const
+	{
+		return r + b + g;
+	}
+
 	float r;
 	float g;
 	float b;

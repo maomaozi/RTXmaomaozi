@@ -342,9 +342,9 @@ public:
 
 		result.set_down_right(
 		Point3(
-			max(pointA.x, max(pointB.x, pointC.x)),
-			max(pointA.y, max(pointB.y, pointC.y)),
-			max(pointA.z, max(pointB.z, pointC.z))
+			max(pointA.x, max(pointB.x, pointC.x)) + 1,
+			max(pointA.y, max(pointB.y, pointC.y)) + 1,
+			max(pointA.z, max(pointB.z, pointC.z)) + 1
 		));
 	}
 

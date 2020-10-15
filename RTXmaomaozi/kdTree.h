@@ -1,6 +1,6 @@
 #pragma once
 
-#include "aabb.h"
+#include "AABB.h"
 #include "vec.h"
 #include <unordered_set>
 #include <algorithm>
@@ -13,7 +13,7 @@ public:
 	~KdTree();
 
 	void insert(const AABB* box);
-	void ray_query(const Point3 &point, const Vec3 &direct, std::unordered_set<const AABB *, AABBhash> &result);
+	void ray_query(const Point3 &point, const Vec3 &direct, std::unordered_set<void *> &result);
 
 private:
 	bool is_leaf();
@@ -25,7 +25,7 @@ private:
 	int depth;
 	int max_depth;
 
-	std::unordered_set<const AABB *, AABBhash> values;
+	std::unordered_set<const AABB *> values;
 
 	AABB area;
 
@@ -62,14 +62,18 @@ inline void KdTree::insert(const AABB *box)
 	}
 }
 
-inline void KdTree::ray_query(const Point3 &point, const Vec3 &direct, std::unordered_set<const AABB *, AABBhash> &result)
+inline void KdTree::ray_query(const Point3 &point, const Vec3 &direct, std::unordered_set<void *> &result)
 {
 	if (level_intersect(point, direct)) 
 	{
 
 		if (is_leaf()) 
 		{
-			result.insert(values.cbegin(), values.cend());
+			for (auto it: values)
+			{
+				result.insert(it->data);
+			}
+
 			return;
 		}
 

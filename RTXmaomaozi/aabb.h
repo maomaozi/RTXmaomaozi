@@ -23,22 +23,27 @@ public:
 
 	int operator==(AABB const * const &lhs) const;
 
+	void *data;
 private:
 	Point3 top_left;
 	Point3 down_right;
 };
 
+
 inline AABB::AABB() : top_left({ 0,0,0 }), down_right({ 0, 0, 0 })
 {
 }
+
 
 AABB::AABB(const Point3 &top_left, Point3 &down_right) : top_left(top_left), down_right(down_right)
 {
 }
 
+
 AABB::~AABB()
 {
 }
+
 
 inline bool AABB::intersection(const AABB *box)
 {
@@ -55,6 +60,7 @@ inline bool AABB::intersection(const AABB *box)
 	return true;
 }
 
+
 inline void AABB::split(float value, int axis, AABB &lhs, AABB &rhs)
 {
 	Point3 new_down_right = Point3(down_right);
@@ -70,25 +76,30 @@ inline void AABB::split(float value, int axis, AABB &lhs, AABB &rhs)
 	rhs.down_right = down_right;
 }
 
+
 inline const Point3 & AABB::get_top_left() const
 {
 	return top_left;
 }
+
 
 inline const Point3 & AABB::get_down_right() const
 {
 	return down_right;
 }
 
+
 inline void AABB::set_top_left(const Point3 & vec)
 {
 	top_left = vec;
 }
 
+
 inline void AABB::set_down_right(const Point3 & vec)
 {
 	down_right = vec;
 }
+
 
 inline int AABB::operator==(AABB const * const &lhs) const
 {
@@ -100,20 +111,3 @@ inline int AABB::operator==(AABB const * const &lhs) const
 
 	return 1;
 }
-
-
-class AABBhash {
-public:
-	int operator()(AABB const * const &box) const {
-		int seed = 131;
-		int hash = 0;
-
-		for (int i = 0; i < 3; ++i) 
-		{
-			hash = (hash * seed) + box->get_top_left()[i];
-			hash = (hash * seed) + box->get_down_right()[i];
-		}
-
-		return hash;
-	}
-};

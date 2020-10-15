@@ -156,6 +156,7 @@
     <ClInclude Include="kdTree.h" />
     <ClInclude Include="light.h" />
     <ClInclude Include="object.h" />
+    <ClInclude Include="scence.h" />
     <ClInclude Include="tracer.h" />
     <ClInclude Include="vec.h" />
     <ClInclude Include="stdafx.h" />
